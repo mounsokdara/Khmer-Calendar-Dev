@@ -30,6 +30,13 @@ android {
         }
     }
 
+    packaging {
+        jniLibs {
+            // Keep native libraries compressed inside the APK (about half the size).
+            useLegacyPackaging = true
+        }
+    }
+
     signingConfigs {
         create("release") {
             // Credentials come from environment variables (GitHub Actions secrets or local shell). Never hardcode.
