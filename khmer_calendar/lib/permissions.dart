@@ -364,6 +364,11 @@ Future<bool> requestBackground(AppStore store, {BuildContext? context}) async {
   }
   try {
     if (_android) {
+      try {
+        await Permission.ignoreBatteryOptimizations.request();
+      } catch (e) {
+        debugPrint('battery handler: $e');
+      }
       if (!await backgroundAllowed()) {
         await _pause();
         await _native('requestBatteryExemption');

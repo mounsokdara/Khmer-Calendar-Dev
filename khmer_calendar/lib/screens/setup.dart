@@ -177,7 +177,7 @@ class _SetupPageState extends State<SetupPage> {
     if (!allOk) return;
     store.setSetupDone(true);
     if (!mounted) return;
-    context.go('/calendar');
+    context.go('/months');
   }
 
   Future<void> _skip() async {
@@ -187,7 +187,7 @@ class _SetupPageState extends State<SetupPage> {
     await keepOnlyGranted(store);
     if (!mounted) return;
     store.setSetupDone(true);
-    context.go('/calendar');
+    context.go('/months');
   }
 
   Widget _actionButton({required Widget child, required VoidCallback? onPressed, bool outlined = false}) {

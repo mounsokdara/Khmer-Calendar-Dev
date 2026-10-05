@@ -1,30 +1,15 @@
 import 'dart:async';
-import 'dart:math' as math;
 
 import 'package:flutter/material.dart';
-
-class SnackColors {
-  const SnackColors(this.container, this.content, this.action);
-
-  final Color container, content, action;
-
-  static const light = SnackColors(Color(0xFF322F35), Color(0xFFF5EFF7), Color(0xFFD0BCFF));
-  static const dark = SnackColors(Color(0xFFE6E0E9), Color(0xFF322F35), Color(0xFF6750A4));
-
-  static SnackColors forBrightness(Brightness b) => b == Brightness.dark ? dark : light;
-  static SnackColors of(BuildContext context) => forBrightness(Theme.of(context).brightness);
-}
 
 class SlideSnackBar {
   SlideSnackBar._();
 
   static OverlayEntry? _entry;
-  static _SlideSnackBarHostState? _host;
 
   static void hide() {
     _entry?.remove();
     _entry = null;
-    _host?._clear();
   }
 
   static void show(
@@ -39,9 +24,12 @@ class SlideSnackBar {
   }) {
     hide();
 
-    _SlideSnackBar build(Key key, EdgeInsets insets, VoidCallback onDismissed) => _SlideSnackBar(
-          key: key,
-          insets: insets,
+    final OverlayState overlay = Overlay.of(context, rootOverlay: true);
+
+    late final OverlayEntry entry;
+    entry = OverlayEntry(
+      builder: (BuildContext context) {
+        return _SlideSnackBar(
           message: message,
           behavior: behavior,
           showCloseIcon: showCloseIcon,
@@ -49,106 +37,23 @@ class SlideSnackBar {
           onActionPressed: onActionPressed,
           duration: duration,
           actionOverflowThreshold: actionOverflowThreshold,
-          onDismissed: onDismissed,
+          onDismissed: () {
+            if (_entry == entry) {
+              _entry = null;
+            }
+            entry.remove();
+          },
         );
-
-    final host = _host;
-    final ModalRoute<dynamic>? route = ModalRoute.of(context);
-    if (host != null && host.mounted && (route == null || route is PageRoute)) {
-      host._present((Key key, VoidCallback onDismissed) => build(key, EdgeInsets.zero, onDismissed));
-      return;
-    }
-    final OverlayState overlay = Overlay.of(context, rootOverlay: true);
-    late final OverlayEntry entry;
-    entry = OverlayEntry(
-      // Recomputed on every build so the snackbar follows the host when the
-      // window is rotated or resized while it is showing.
-      builder: (BuildContext context) => build(const ValueKey('snack'), _hostInsets(context), () {
-        if (_entry == entry) {
-          _entry = null;
-        }
-        entry.remove();
-      }),
+      },
     );
+
     _entry = entry;
     overlay.insert(entry);
   }
 }
 
-EdgeInsets _hostInsets(BuildContext context) {
-  final _SlideSnackBarHostState? host = SlideSnackBar._host;
-  if (host == null || !host.mounted) return EdgeInsets.zero;
-  final RenderObject? box = host.context.findRenderObject();
-  if (box is! RenderBox || !box.attached || !box.hasSize) return EdgeInsets.zero;
-  final Size screen = MediaQuery.sizeOf(context);
-  final Offset topLeft = box.localToGlobal(Offset.zero);
-  final Offset bottomRight = box.localToGlobal(box.size.bottomRight(Offset.zero));
-  return EdgeInsets.fromLTRB(
-    math.max(0, topLeft.dx),
-    0,
-    math.max(0, screen.width - bottomRight.dx),
-    math.max(0, screen.height - bottomRight.dy),
-  );
-}
-
-class SlideSnackBarHost extends StatefulWidget {
-  const SlideSnackBarHost({super.key, required this.child});
-
-  final Widget child;
-
-  @override
-  State<SlideSnackBarHost> createState() => _SlideSnackBarHostState();
-}
-
-class _SlideSnackBarHostState extends State<SlideSnackBarHost> {
-  Widget? _current;
-  Object? _token;
-
-  @override
-  void initState() {
-    super.initState();
-    SlideSnackBar._host = this;
-  }
-
-  @override
-  void dispose() {
-    if (SlideSnackBar._host == this) SlideSnackBar._host = null;
-    super.dispose();
-  }
-
-  void _present(_SlideSnackBar Function(Key key, VoidCallback onDismissed) build) {
-    final Object token = Object();
-    setState(() {
-      _token = token;
-      _current = build(ObjectKey(token), () => _clear(token));
-    });
-  }
-
-  void _clear([Object? token]) {
-    if (!mounted || _current == null) return;
-    if (token != null && token != _token) return;
-    setState(() {
-      _token = null;
-      _current = null;
-    });
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    return Stack(
-      clipBehavior: Clip.none,
-      children: <Widget>[
-        Positioned.fill(child: widget.child),
-        if (_current != null) _current!,
-      ],
-    );
-  }
-}
-
 class _SlideSnackBar extends StatefulWidget {
   const _SlideSnackBar({
-    super.key,
-    required this.insets,
     required this.message,
     required this.behavior,
     required this.showCloseIcon,
@@ -159,7 +64,6 @@ class _SlideSnackBar extends StatefulWidget {
     required this.onDismissed,
   });
 
-  final EdgeInsets insets;
   final String message;
   final SnackBarBehavior behavior;
   final bool showCloseIcon;
@@ -300,13 +204,16 @@ class _SlideSnackBarState extends State<_SlideSnackBar>
   @override
   Widget build(BuildContext context) {
     final ThemeData theme = Theme.of(context);
+    final ColorScheme scheme = theme.colorScheme;
     final bool floating = widget.behavior == SnackBarBehavior.floating;
 
-    final SnackColors colors = SnackColors.of(context);
-    final Color backgroundColor = colors.container;
-    final Color foregroundColor = colors.content;
+    final Color backgroundColor =
+        theme.snackBarTheme.backgroundColor ?? scheme.inverseSurface;
+    final Color foregroundColor =
+        theme.snackBarTheme.actionTextColor ?? scheme.onInverseSurface;
     final TextStyle textStyle =
-        theme.textTheme.bodyMedium!.copyWith(color: colors.content);
+        theme.snackBarTheme.contentTextStyle ??
+        theme.textTheme.bodyMedium!.copyWith(color: scheme.onInverseSurface);
 
     final Widget? actionButton = widget.actionLabel == null
         ? null
@@ -315,15 +222,14 @@ class _SlideSnackBarState extends State<_SlideSnackBar>
               widget.onActionPressed?.call();
               _dismiss();
             },
-            style: TextButton.styleFrom(foregroundColor: colors.action),
+            style: TextButton.styleFrom(foregroundColor: foregroundColor),
             child: Text(widget.actionLabel!),
           );
 
     final Widget bar = Material(
       color: backgroundColor,
-      surfaceTintColor: Colors.transparent,
       elevation: 6,
-      borderRadius: floating ? BorderRadius.circular(4) : BorderRadius.zero,
+      borderRadius: floating ? BorderRadius.circular(8) : BorderRadius.zero,
       clipBehavior: Clip.antiAlias,
       child: Padding(
         padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
@@ -347,60 +253,50 @@ class _SlideSnackBarState extends State<_SlideSnackBar>
       ),
     );
 
-    final double safeBottom = (MediaQuery.of(context).padding.bottom - widget.insets.bottom)
-        .clamp(0.0, double.infinity)
-        .toDouble();
-
-    final Widget tappable = GestureDetector(
-      behavior: HitTestBehavior.opaque,
-      onVerticalDragStart: _onDragStart,
-      onVerticalDragUpdate: _onDragUpdate,
-      onVerticalDragEnd: _onDragEnd,
-      onVerticalDragCancel: _onDragCancel,
-      child: KeyedSubtree(key: _barKey, child: bar),
-    );
-
     return Positioned(
-      left: widget.insets.left,
-      right: widget.insets.right,
-      top: 0,
-      bottom: widget.insets.bottom,
-      child: ClipRect(
-        child: Align(
-          alignment: Alignment.bottomCenter,
-          child: SlideTransition(
-            position: _slide,
-            child: AnimatedBuilder(
-              animation: Listenable.merge(<Listenable>[_fade, _dragController]),
-              builder: (BuildContext context, Widget? child) {
-                final double dragProgress = _dragController.value;
-                final double opacity =
-                    (_fade.value * (1.0 - dragProgress)).clamp(0.0, 1.0);
-                return Opacity(
-                  opacity: opacity,
-                  child: FractionalTranslation(
-                    translation: Offset(0, dragProgress),
-                    child: child,
-                  ),
-                );
-              },
-              child: Padding(
-                padding: EdgeInsets.only(
-                  left: floating ? 16 : 0,
-                  right: floating ? 16 : 0,
-                  bottom: (floating ? 16 : 0) + safeBottom,
-                ),
-                child: floating
-                    ? Align(
-                        alignment: Alignment.bottomCenter,
-                        heightFactor: 1,
-                        child: ConstrainedBox(
-                          constraints: const BoxConstraints(maxWidth: 400),
-                          child: tappable,
-                        ),
-                      )
-                    : tappable,
+      left: 0,
+      right: 0,
+      bottom: 0,
+      child: SlideTransition(
+        position: _slide,
+        child: AnimatedBuilder(
+          animation: Listenable.merge(<Listenable>[_fade, _dragController]),
+          builder: (BuildContext context, Widget? child) {
+            final double dragProgress = _dragController.value;
+            final double opacity =
+                (_fade.value * (1.0 - dragProgress)).clamp(0.0, 1.0);
+            return Opacity(
+              opacity: opacity,
+              child: FractionalTranslation(
+                translation: Offset(0, dragProgress),
+                child: child,
               ),
+            );
+          },
+          child: GestureDetector(
+            behavior: HitTestBehavior.opaque,
+            onVerticalDragStart: _onDragStart,
+            onVerticalDragUpdate: _onDragUpdate,
+            onVerticalDragEnd: _onDragEnd,
+            onVerticalDragCancel: _onDragCancel,
+            child: Padding(
+              key: _barKey,
+              padding: EdgeInsets.only(
+                left: floating ? 16 : 0,
+                right: floating ? 16 : 0,
+                bottom: (floating ? 16 : 0) +
+                    MediaQuery.of(context).padding.bottom,
+              ),
+              child: floating
+                  ? Align(
+                      alignment: Alignment.bottomCenter,
+                      heightFactor: 1,
+                      child: ConstrainedBox(
+                        constraints: const BoxConstraints(maxWidth: 400),
+                        child: bar,
+                      ),
+                    )
+                  : bar,
             ),
           ),
         ),

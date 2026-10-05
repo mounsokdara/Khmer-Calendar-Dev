@@ -11,7 +11,7 @@ import 'permissions.dart';
 import 'screens/events.dart';
 import 'screens/licenses.dart';
 import 'screens/more.dart';
-import 'screens/calendar.dart';
+import 'screens/months.dart';
 import 'screens/setup.dart';
 import 'screens/shell.dart';
 import 'screens/splash.dart';
@@ -25,7 +25,8 @@ final store = AppStore();
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
   IntlHelper.localeName = WidgetsBinding.instance.platformDispatcher.locale.languageCode;
-  await Future.wait([NetStatus.start(), Haptics.instance.init()]);
+  await NetStatus.start();
+  await Haptics.instance.init();
   runApp(KhmerCalendarApp(store: store));
   store.hydrate().then((_) => applyStoredPermissions(store));
 }
@@ -66,8 +67,8 @@ class _KhmerCalendarAppState extends State<KhmerCalendarApp> {
               return '/weather';
             case TabId.more:
               return '/more';
-            case TabId.calendar:
-              return '/calendar';
+            case TabId.months:
+              return '/months';
           }
         }
         return null;
@@ -79,7 +80,7 @@ class _KhmerCalendarAppState extends State<KhmerCalendarApp> {
           builder: (ctx, state, child) => AppShell(store: widget.store, child: child),
           routes: [
             GoRoute(path: '/day', builder: (_, _) => TodayPage(store: widget.store)),
-            GoRoute(path: '/calendar', builder: (_, _) => CalendarPage(store: widget.store)),
+            GoRoute(path: '/months', builder: (_, _) => MonthsPage(store: widget.store)),
             GoRoute(path: '/events', builder: (_, _) => EventsPage(store: widget.store)),
             GoRoute(path: '/weather', builder: (_, _) => WeatherPage(store: widget.store)),
             GoRoute(path: '/more', builder: (_, _) => MorePage(store: widget.store)),

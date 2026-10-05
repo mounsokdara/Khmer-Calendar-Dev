@@ -1,5 +1,4 @@
-# Android DEV build: package com.mounsokdara.khmercalendar.dev,
-# label "ប្រតិទិនខ្មែរ Dev", so it installs next to the production app.
+# Android build of the old calendar (android + lib from f112c47, v1.0.2), production package id.
 # Same sign script and plain release build as the video-player app / old calendar release (f112c47). Publishes the rolling pre-release "dev-latest".
 # Does not touch the website, Windows, macOS or Linux builds.
 name: Android Dev
@@ -22,8 +21,6 @@ jobs:
   android-dev:
     runs-on: ubuntu-latest
     timeout-minutes: 45
-    env:
-      KHMER_DEV: "true"
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-java@v4
@@ -69,5 +66,5 @@ jobs:
           gh release delete dev-latest --yes --cleanup-tag || true
           gh release create dev-latest khmer_calendar/build/app/outputs/flutter-apk/KhmerCalendar-dev.apk \
             --target "$GITHUB_SHA" --title "Khmer Calendar DEV (build ${{ github.run_number }})" \
-            --notes "Dev build from main @ ${GITHUB_SHA::7}. Package com.mounsokdara.khmercalendar.dev, installs next to the production app." \
+            --notes "Dev build from main @ ${GITHUB_SHA::7}. Same package as production (old lib + android from f112c47); uninstall the production app first." \
             --prerelease

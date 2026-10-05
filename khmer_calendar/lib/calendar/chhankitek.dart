@@ -149,8 +149,6 @@ const _monthsKm = ['មករា', 'កុម្ភៈ', 'មីនា', 'មេ
 const _khmerDigits = ['០', '១', '២', '៣', '៤', '៥', '៦', '៧', '៨', '៩'];
 
 const _epoch = 1900;
-// The cursor table is anchored at _epoch but walked backwards for earlier years.
-const _minYear = 1;
 const _epochMonth = 2;
 const _epochDay = 1;
 const _normalYear = 354;
@@ -168,9 +166,6 @@ final _vesak16 = <int, DateTime>{};
 final _dayCache = <String, LunarDay>{};
 final _lunarCache = <String, LunarDay>{};
 final _yearCursorCache = <int, ({int month, int day})>{};
-final _cwCache = <int, int>{};
-final _yearTypeCache = <int, String>{};
-final _yearTableCache = <int, List<({int month, int day, int length})>>{};
 
 int _mod(int e, int t) => (e % t + t) % t;
 
@@ -189,41 +184,28 @@ String toIso(DateTime e) {
   return '$y-$m-$d';
 }
 
-final _isoPattern = RegExp(r'^(\d{4})-(\d{2})-(\d{2})');
-
 DateTime parseDate(Object e) {
   if (e is DateTime) {
-    if (e.year < _minYear) throw ArgumentError('Dates before $_minYear-01-01 are not supported.');
+    if (e.year < _epoch) throw ArgumentError('Dates before $_epoch-01-01 are not supported.');
     return _dateOnly(e);
   }
   if (e is String) {
     final t = e.trim();
-    final iso = _isoPattern.firstMatch(t);
+    final iso = RegExp(r'^(\d{4})-(\d{2})-(\d{2})').firstMatch(t);
     if (iso != null) {
       final y = int.parse(iso.group(1)!);
       final m = int.parse(iso.group(2)!);
       final d = int.parse(iso.group(3)!);
       final r = DateTime(y, m, d);
       if (r.year != y || r.month != m || r.day != d) throw ArgumentError('Invalid date provided.');
-      if (y < _minYear) throw ArgumentError('Dates before $_minYear-01-01 are not supported.');
+      if (y < _epoch) throw ArgumentError('Dates before $_epoch-01-01 are not supported.');
       return r;
     }
   }
   throw ArgumentError('Invalid date provided.');
 }
 
-String khmerNum(Object v) {
-  final s = v.toString();
-  final b = StringBuffer();
-  for (final c in s.codeUnits) {
-    if (c >= 0x30 && c <= 0x39) {
-      b.write(_khmerDigits[c - 0x30]);
-    } else {
-      b.writeCharCode(c);
-    }
-  }
-  return b.toString();
-}
+String khmerNum(Object v) => v.toString().replaceAllMapped(RegExp(r'\d'), (m) => _khmerDigits[int.parse(m[0]!)]);
 
 List<int> _normHms(int e, int t, int n) {
   var r = e, i = t, a = n;
@@ -320,9 +302,7 @@ int _ow(int e) {
 
 bool _sw(int e) => 800 - (_beOf(e) * 292207 + 499) % 800 <= 207;
 
-int _cw(int e) => _cwCache[e] ??= _cwCompute(e);
-
-int _cwCompute(int e) {
+int _cw(int e) {
   final t = _aw(e);
   final n = _ow(e);
   var r = n >= 25 || n <= 5;
@@ -340,9 +320,7 @@ int _cwCompute(int e) {
   return 0;
 }
 
-String _yearType(int e) => _yearTypeCache[e] ??= _yearTypeCompute(e);
-
-String _yearTypeCompute(int e) {
+String _yearType(int e) {
   final t = _cw(e);
   if (t == 3 || t == 1) return 'leap-month';
   if (t == 2 || _cw(e - 1) == 3) return 'leap-day';
@@ -378,75 +356,25 @@ int _monthLength(int e, int t) {
 
 int _dayOfYear(DateTime e) => e.difference(DateTime(e.year, 1, 1)).inDays;
 
-/// One entry per day of the Gregorian [year] (index = day of year, 0-based):
-/// the Khmer month, day-in-month and month length. Built once per year so a
-/// date lookup is O(1) instead of walking up to 365 days with repeated
-/// leap-year maths on every call.
-List<({int month, int day, int length})> _yearTable(int year) {
-  final hit = _yearTableCache[year];
-  if (hit != null) return hit;
-  final start = _cursorOf(year);
-  var m = start.month;
-  var d = start.day;
-  var len = _monthLength(m, year);
-  final out = <({int month, int day, int length})>[(month: m, day: d, length: len)];
-  for (var k = 0; k < 366; k += 1) {
-    d += 1;
-    if (d > len) {
-      d = 1;
-      m = _wrapMonth(m + 1, year);
-      len = _monthLength(m, year);
+({int month, int day}) _advance(int e, int t, int n, int r) {
+  var i = e;
+  var a = t;
+  for (var k = 0; k < r; k += 1) {
+    a += 1;
+    if (a > _monthLength(i, n)) {
+      a = 1;
+      i = _wrapMonth(i + 1, n);
     }
-    out.add((month: m, day: d, length: len));
   }
-  _yearTableCache[year] = out;
-  return out;
+  return (month: i, day: a);
 }
 
 ({int month, int day}) _cursorOf(int e) {
   final hit = _yearCursorCache[e];
   if (hit != null) return hit;
-  if (e < _epoch) {
-    // Walk backwards from the nearest known year: the exact inverse of the forward step below.
-    var t = _epochMonth;
-    var n = _epochDay;
-    var from = _epoch;
-    for (var y = e + 1; y < _epoch; y += 1) {
-      final next = _yearCursorCache[y];
-      if (next != null) {
-        from = y;
-        t = next.month;
-        n = next.day;
-        break;
-      }
-    }
-    for (var r = from - 1; r >= e; r -= 1) {
-      n -= _gregorianLength(r) - _yearLength(r);
-      while (n <= 0) {
-        t = _wrapMonth(t - 1, r);
-        n += _monthLength(t, r);
-      }
-      while (n > _monthLength(t, r)) {
-        n -= _monthLength(t, r);
-        t = _wrapMonth(t + 1, r);
-      }
-      _yearCursorCache[r] = (month: t, day: n);
-    }
-    return _yearCursorCache[e]!;
-  }
   var t = _epochMonth;
   var n = _epochDay;
-  var from = _epoch;
-  for (var y = e - 1; y > _epoch; y -= 1) {
-    final prev = _yearCursorCache[y];
-    if (prev != null) {
-      from = y;
-      t = prev.month;
-      n = prev.day;
-      break;
-    }
-  }
-  for (var r = from; r < e; r += 1) {
+  for (var r = _epoch; r < e; r += 1) {
     n += _gregorianLength(r) - _yearLength(r);
     while (n > _monthLength(t, r)) {
       n -= _monthLength(t, r);
@@ -464,40 +392,24 @@ List<({int month, int day, int length})> _yearTable(int year) {
 
 ({String khmerMonth, int monthDay, int monthLength, String yearType}) _lunarParts(DateTime e) {
   final t = e.year;
-  final r = _yearTable(t)[_dayOfYear(e)];
+  final n = _cursorOf(t);
+  final r = _advance(n.month, n.day, t, _dayOfYear(e));
   return (
     khmerMonth: _monthName(r.month, t),
     monthDay: r.day,
-    monthLength: r.length,
+    monthLength: _monthLength(r.month, t),
     yearType: _yearType(t),
   );
 }
 
-// The Khmer year is sidereal (365.25875 d) so its new year drifts against the Gregorian
-// calendar. A month + day label repeats about every 354 days, so it can occur twice inside
-// one Gregorian year; take the occurrence closest to where it falls in the modern era,
-// shifted by the estimated drift. For 1900-2100 this is the same date the old fixed
-// April 10 - June 15 window gave.
-int _driftDays(int year) => ((year - 2000) * 0.01625).round();
-
 DateTime _locate(int year, String khmerMonth, int monthDay) {
-  final center = DateTime(year, 5, 13).difference(DateTime(year, 1, 1)).inDays + _driftDays(year);
-  DateTime? best;
-  var bestGap = 1 << 30;
-  var n = DateTime(year, 1, 1);
-  final r = DateTime(year, 12, 31);
+  var n = DateTime(year, 4, 10);
+  final r = DateTime(year, 6, 15);
   while (!n.isAfter(r)) {
     final parts = _lunarParts(n);
-    if (parts.khmerMonth == khmerMonth && parts.monthDay == monthDay) {
-      final gap = (_dayOfYear(n) - center).abs();
-      if (gap < bestGap) {
-        bestGap = gap;
-        best = _dateOnly(n);
-      }
-    }
+    if (parts.khmerMonth == khmerMonth && parts.monthDay == monthDay) return _dateOnly(n);
     n = _addDays(n, 1);
   }
-  if (best != null) return best;
   throw StateError('Unable to locate Khmer boundary date for Gregorian year $year.');
 }
 
@@ -847,7 +759,7 @@ List<Holiday> _fixedHolidays(int e) => [
     ];
 
 List<Holiday> holidaysOfYear(int e) {
-  if (e < _minYear) throw ArgumentError('Year must be $_minYear or later.');
+  if (e < _epoch) throw ArgumentError('Year must be $_epoch or later.');
   final hit = _yearHolidays[e];
   if (hit != null) return hit.map((x) => x.copy()).toList();
   final t = _fixedHolidays(e);

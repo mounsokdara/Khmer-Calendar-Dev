@@ -422,9 +422,8 @@ const wideBreak = 840.0;
 const mediumBreak = 720.0;
 const xlBreak = 1180.0;
 
-// Keep in sync with `version:` in pubspec.yaml (test/version_sync_test.dart enforces it).
-const appVersion = '1.0.3';
-const appBuildNumber = 4;
+const appVersion = '1.0.2';
+const appBuildNumber = 3;
 const appAuthor = 'Moun Sokdara';
 const appSourceUrl = 'https://github.com/mounsokdara/Khmer-Calendar';
 const appWebsiteUrl = 'https://khmercalendar.pages.dev';

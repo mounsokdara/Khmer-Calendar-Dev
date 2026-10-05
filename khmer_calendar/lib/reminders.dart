@@ -274,7 +274,6 @@ Future<void> syncReminders(AppStore store) async {
   final sig = _reminderSignature(store);
   if (sig == _reminderSig) return;
   _reminderSig = sig;
-  if (!androidNativeAlarms) await ensureNotifyLists();
   final shots = _collect(store);
   if (kIsWeb) {
     _armWeb(shots);

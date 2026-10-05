@@ -302,7 +302,7 @@ Future<WeatherSnap> fetchWeather(City city) async {
     '&current=temperature_2m,weather_code,relative_humidity_2m,wind_speed_10m,apparent_temperature,uv_index,cloud_cover'
     '&hourly=temperature_2m,weather_code&daily=temperature_2m_max,temperature_2m_min,weather_code&timezone=Asia%2FPhnom_Penh',
   );
-  final res = await http.get(url).timeout(const Duration(seconds: 10));
+  final res = await http.get(url);
   if (res.statusCode != 200) throw Exception('Http ${res.statusCode}');
   final j = jsonDecode(res.body) as Map<String, dynamic>;
   final hourlyTimes = (j['hourly']?['time'] as List?) ?? [];

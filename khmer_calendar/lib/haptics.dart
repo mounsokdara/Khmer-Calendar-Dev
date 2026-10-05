@@ -34,12 +34,7 @@ class Haptics {
     await prefs.setString(_key, mode.name);
   }
 
-  Future<void> tick() => _pulse(8, 40);
-
-  /// A heavier pulse, for hitting the end of a gesture (e.g. the last zoom level).
-  Future<void> thud() => _pulse(22, 160);
-
-  Future<void> _pulse(int duration, int amplitude) async {
+  Future<void> tick() async {
     if (_mode == HapticsMode.off) return;
 
     if (kIsWeb) {
@@ -65,7 +60,7 @@ class Haptics {
 
     try {
       if (await Vibration.hasVibrator() != true) return;
-      await Vibration.vibrate(duration: duration, amplitude: amplitude);
+      await Vibration.vibrate(duration: 8, amplitude: 40);
     } catch (_) {
 
     }

@@ -105,23 +105,7 @@ List<Observance> senKantongOf(int year) {
   return list;
 }
 
-// The store replaces `events` with a new list on every change (never mutates
-// it in place), so list identity is a cheap and safe cache key.
-List<CalendarEvent>? _eventObsSource;
-List<Observance> _eventObsCached = const [];
-List<CalendarEvent>? _monthObsSource;
-final _monthObsCache = <int, List<Observance>>{};
-
 List<Observance> _eventObservances(List<CalendarEvent> events) {
-  if (events.isEmpty) return const [];
-  if (!identical(events, _eventObsSource)) {
-    _eventObsSource = events;
-    _eventObsCached = _buildEventObservances(events);
-  }
-  return _eventObsCached;
-}
-
-List<Observance> _buildEventObservances(List<CalendarEvent> events) {
   final out = <Observance>[];
   for (final n in events) {
     if (n.date.isEmpty) {
@@ -233,16 +217,9 @@ List<Observance> yearObservances(int year, [List<CalendarEvent> events = const [
     rangeObservances(DateTime(year, 1, 1), DateTime(year, 12, 31), events);
 
 List<Observance> monthObservances(DateTime month, List<CalendarEvent> events) {
-  if (!identical(events, _monthObsSource)) {
-    _monthObsSource = events;
-    _monthObsCache.clear();
-  }
-  final key = month.year * 12 + month.month - 1;
-  return _monthObsCache[key] ??= () {
-    final start = DateTime(month.year, month.month, 1);
-    final end = DateTime(month.year, month.month + 1, 0);
-    return List<Observance>.unmodifiable(rangeObservances(start, end, events));
-  }();
+  final start = DateTime(month.year, month.month, 1);
+  final end = DateTime(month.year, month.month + 1, 0);
+  return rangeObservances(start, end, events);
 }
 
 List<Observance> observancesOn(String iso, List<CalendarEvent> events) {
@@ -314,13 +291,4 @@ String dayTone(String iso, bool inMonth) {
   return 'default';
 }
 
-List<CalendarEvent>? _markSource;
-Set<String> _markDates = const {};
-
-bool hasDayMark(String iso, List<CalendarEvent> events) {
-  if (!identical(events, _markSource)) {
-    _markSource = events;
-    _markDates = {for (final e in events) e.date};
-  }
-  return _markDates.contains(iso);
-}
+bool hasDayMark(String iso, List<CalendarEvent> events) => events.any((e) => e.date == iso);

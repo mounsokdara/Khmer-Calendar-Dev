@@ -50,8 +50,8 @@ Future<void> showTaskSheet(
                       final picked = await showDatePicker(
                         context: ctx,
                         initialDate: fromIso(day),
-                        firstDate: DateTime(calendarStartYear),
-                        lastDate: DateTime(calendarEndYear, 12, 31),
+                        firstDate: DateTime(1900),
+                        lastDate: DateTime(2100),
                       );
                       if (picked != null) setSt(() => day = isoOf(picked));
                     },
@@ -94,8 +94,8 @@ Future<void> showTaskSheet(
                       final picked = await showDatePicker(
                         context: ctx,
                         initialDate: fromIso(reminderDate.isEmpty ? day : reminderDate),
-                        firstDate: DateTime(calendarStartYear),
-                        lastDate: DateTime(calendarEndYear, 12, 31),
+                        firstDate: DateTime(1900),
+                        lastDate: DateTime(2100),
                       );
                       if (picked == null) return;
                       if (!ctx.mounted) return;
