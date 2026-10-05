@@ -1,6 +1,6 @@
 # Android DEV build: package com.mounsokdara.khmercalendar.dev,
 # label "ប្រតិទិនខ្មែរ Dev", so it installs next to the production app.
-# Signed with the same release key. Publishes the rolling pre-release "dev-latest".
+# Same sign script and plain release build as the video-player app / old calendar release (f112c47). Publishes the rolling pre-release "dev-latest".
 # Does not touch the website, Windows, macOS or Linux builds.
 name: Android Dev
 
@@ -43,14 +43,14 @@ jobs:
           echo "$ANDROID_KEYSTORE_BASE64" | base64 -d > "$RUNNER_TEMP/khmer-release.keystore"
       - run: flutter pub get
         working-directory: khmer_calendar
-      - run: flutter build apk --release --target-platform android-arm,android-arm64 --build-number=${{ github.run_number }}
+      - run: flutter build apk --release --build-number=${{ github.run_number }}
         working-directory: khmer_calendar
         env:
           ANDROID_KEYSTORE: ${{ runner.temp }}/khmer-release.keystore
           ANDROID_KEYSTORE_PASSWORD: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
           ANDROID_KEY_ALIAS: ${{ secrets.ANDROID_KEY_ALIAS }}
           ANDROID_KEY_PASSWORD: ${{ secrets.ANDROID_KEY_PASSWORD }}
-      - name: Align, sign (v1+v2+v3+v4) + verify APK
+      - name: Sign + verify APK (apksigner v1/v2/v3)
         env:
           KS_PASS: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
           KEY_PASS: ${{ secrets.ANDROID_KEY_PASSWORD }}
