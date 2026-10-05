@@ -1,0 +1,20 @@
+# Flutter
+khmer_calendar/build/
+khmer_calendar/.dart_tool/
+khmer_calendar/.flutter-plugins
+khmer_calendar/.flutter-plugins-dependencies
+khmer_calendar/.idea/
+
+# Release staging (made by the Release workflow)
+release-files/
+
+# Secrets and signing keys live in the private vault repo / GitHub secrets
+.env
+.env.*
+*.keystore
+*.jks
+key.properties
+
+.DS_Store
+*.log
+.wrangler/

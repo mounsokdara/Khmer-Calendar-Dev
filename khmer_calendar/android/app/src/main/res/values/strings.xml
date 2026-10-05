@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="widget_name">ប្រតិទិនខ្មែរ</string>
+    <string name="widget_description">Today\'s Khmer calendar date</string>
+    <string name="widget_month_name">ខែ</string>
+    <string name="widget_month_description">Month calendar with arrows</string>
+    <string name="widget_weather_name">អាកាសធាតុ</string>
+    <string name="widget_weather_description">Current weather</string>
+</resources>

@@ -1,0 +1,328 @@
+import 'package:flutter/foundation.dart' show kIsWeb, defaultTargetPlatform, TargetPlatform;
+import 'package:flutter/material.dart';
+import 'package:go_router/go_router.dart';
+
+import '../../home_screen.dart';
+import '../../i18n.dart';
+import '../../custom_components/slide_snackbar.dart';
+import '../../location.dart';
+import '../../net.dart';
+import '../../permissions.dart';
+import '../../reminders.dart';
+import '../../store.dart';
+import '../../widgets/os_logo.dart';
+import '../../widgets/overlay_page.dart';
+import '../../widgets/segmented_list.dart';
+import 'install_helpers.dart';
+
+class GetStartedPage extends StatefulWidget {
+  const GetStartedPage({super.key, required this.store});
+  final AppStore store;
+
+  @override
+  State<GetStartedPage> createState() => _GetStartedPageState();
+}
+
+class _GetStartedPageState extends State<GetStartedPage> {
+  String step = 'language';
+  bool notify = false;
+  bool bg = false;
+  bool auto = false;
+  bool gps = false;
+  bool busy = false;
+  String asking = '';
+
+  @override
+  void initState() {
+    super.initState();
+    widget.store.addListener(_onStore);
+  }
+
+  @override
+  void dispose() {
+    widget.store.removeListener(_onStore);
+    super.dispose();
+  }
+
+  void _onStore() {
+    if (mounted) setState(() {});
+  }
+
+  Future<void> _askNotify(bool v) async {
+    final store = widget.store;
+    if (!v) {
+      setState(() => notify = false);
+      store.setNotifyOn(false);
+      await cancelAllReminders();
+      await syncHomeWidget(store);
+      return;
+    }
+    await requestNotifications(store);
+    if (!mounted) return;
+    if (!store.notifyOn) {
+      if (await promptIfDenied(store, context: context, kind: 'notify', allowed: notificationsAllowed)) {
+        if (!mounted) return;
+        await requestNotifications(store);
+      }
+    }
+    if (!mounted) return;
+    setState(() => notify = store.notifyOn);
+    showPermSnack(context, store.lang, 'notify', store.notifyOn);
+  }
+
+  Future<void> _askBg(bool v) async {
+    final store = widget.store;
+    if (!v) {
+      setState(() => bg = false);
+      await stopBackground(store);
+      return;
+    }
+    if (kIsWeb) {
+      setState(() => bg = false);
+      if (mounted) {
+        SlideSnackBar.show(context, message: t(store.lang, 'webBgBlock'), behavior: SnackBarBehavior.floating);
+      }
+      return;
+    }
+    await requestBackground(store, context: context);
+    if (!mounted) return;
+    if (!store.backgroundOn) {
+      if (await promptIfDenied(store, context: context, kind: 'background', allowed: backgroundAllowed)) {
+        if (!mounted) return;
+        await requestBackground(store, context: context);
+      }
+    }
+    if (!mounted) return;
+    setState(() => bg = store.backgroundOn);
+    showPermSnack(context, store.lang, 'background', store.backgroundOn);
+  }
+
+  Future<void> _askAuto(bool v) async {
+    final store = widget.store;
+    if (!v) {
+      setState(() => auto = false);
+      await stopAutoLaunch(store);
+      return;
+    }
+    if (kIsWeb) {
+      setState(() => auto = false);
+      if (mounted) {
+        SlideSnackBar.show(context, message: t(store.lang, 'webBgBlock'), behavior: SnackBarBehavior.floating);
+      }
+      return;
+    }
+    await requestAutoLaunch(store, context: context);
+    if (!mounted) return;
+    if (!store.autoLaunchOn && defaultTargetPlatform != TargetPlatform.android) {
+      if (await promptIfDenied(store, context: context, kind: 'auto', allowed: autoLaunchAllowed)) {
+        if (!mounted) return;
+        await requestAutoLaunch(store, context: context);
+      }
+    }
+    if (!mounted) return;
+    setState(() => auto = store.autoLaunchOn);
+    showPermSnack(context, store.lang, 'auto', store.autoLaunchOn);
+  }
+
+  Future<void> _askGps(bool v) async {
+    final store = widget.store;
+    if (!v) {
+      setState(() => gps = false);
+      store.setLocationOn(false);
+      return;
+    }
+    final r = await requestLocationPerm(store);
+    if (!mounted) return;
+    if (!store.locationOn) {
+      await promptIfDenied(store, context: context, kind: 'location', allowed: locationAllowed);
+    }
+    if (!mounted) return;
+    setState(() => gps = store.locationOn);
+    showGpsSnack(context, store.lang, store.locationOn ? r : GpsResult.denied);
+  }
+
+  Future<void> _continue() async {
+    if (busy) return;
+    final store = widget.store;
+    setState(() {
+      busy = true;
+      asking = 'askingNotify';
+    });
+    final allOk = await requestAllPermissions(
+      store,
+      context: context,
+      onStep: (key) {
+        if (!mounted) return;
+        setState(() {
+          asking = key;
+          notify = store.notifyOn;
+          bg = store.backgroundOn;
+          auto = store.autoLaunchOn;
+          gps = store.locationOn;
+        });
+      },
+    );
+    if (!mounted) return;
+    setState(() {
+      notify = store.notifyOn;
+      bg = store.backgroundOn;
+      auto = store.autoLaunchOn;
+      gps = store.locationOn;
+      busy = false;
+      asking = '';
+    });
+    if (!allOk) return;
+    store.setSetupDone(true);
+    if (!mounted) return;
+    context.go('/calendar');
+  }
+
+  Future<void> _skip() async {
+    if (busy) return;
+    final store = widget.store;
+    setState(() => busy = true);
+    await keepOnlyGranted(store);
+    if (!mounted) return;
+    store.setSetupDone(true);
+    context.go('/calendar');
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final store = widget.store;
+    final ui = store.lang;
+    final cs = Theme.of(context).colorScheme;
+    return Scaffold(
+      body: SafeArea(
+        child: Padding(
+          padding: const EdgeInsets.all(24),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              Text(t(ui, 'appName'), style: TextStyle(color: cs.primary, fontWeight: FontWeight.w700)),
+              const SizedBox(height: 12),
+              if (step == 'language') ...[
+                Text(t(ui, 'languageTitle'), style: Theme.of(context).textTheme.headlineSmall),
+                Text(t(ui, 'welcome')),
+                const SizedBox(height: 16),
+                LangRadios(store: store, uiLang: ui),
+                const Spacer(),
+                FilledButton(onPressed: () => setState(() => step = kIsWeb ? 'install' : 'permissions'), child: Text(t(ui, 'setupNext'))),
+              ] else if (step == 'install') ...[
+                Text(t(ui, 'setupInstallTitle'), style: Theme.of(context).textTheme.headlineSmall),
+                Text(t(ui, 'nativeAppSub')),
+                const SizedBox(height: 16),
+                Expanded(
+                  child: ValueListenableBuilder<bool>(
+                    valueListenable: NetStatus.online,
+                    builder: (context, online, _) {
+                      return ListView(
+                        children: [
+                          if (kIsWeb)
+                            SegmentedGroup(
+                              padding: EdgeInsets.zero,
+                              children: [
+                                SegmentedTile(
+                                  leading: const Icon(Icons.install_mobile),
+                                  title: t(ui, 'exportBrowser'),
+                                  subtitle: t(ui, 'exportBrowserSub'),
+                                  trailing: const Icon(Icons.chevron_right),
+                                  onTap: () => openBrowserInstall(context, store: store, lang: ui),
+                                ),
+                              ],
+                            ),
+                          if (kIsWeb) const SizedBox(height: 12),
+                          SegmentedGroup(
+                            padding: EdgeInsets.zero,
+                            children: [
+                              for (final p in [
+                                ('android', 'KhmerCalendar.apk', 'exportApk', 'exportApkSub'),
+                                ('windows', 'KhmerCalendar-windows.zip', 'exportWindows', 'exportWindowsSub'),
+                                ('macos', 'KhmerCalendar.dmg', 'exportMac', 'exportMacSub'),
+                                ('linux', 'KhmerCalendar-linux.tar.gz', 'exportLinux', 'exportLinuxSub'),
+                              ])
+                                SegmentedTile(
+                                  dim: !online,
+                                  leading: OsLogo(p.$1),
+                                  title: t(ui, p.$3),
+                                  subtitle: t(ui, p.$4),
+                                  trailing: const Icon(Icons.download),
+                                  onTap: () => openPackDownload(context, lang: ui, file: p.$2),
+                                ),
+                            ],
+                          ),
+                        ],
+                      );
+                    },
+                  ),
+                ),
+                FilledButton(
+                  onPressed: () => setState(() => step = 'permissions'),
+                  child: Text(t(ui, 'setupNext')),
+                ),
+                TextButton(onPressed: () => setState(() => step = 'permissions'), child: Text(t(ui, 'setupSkip'))),
+              ] else ...[
+                Text(t(ui, 'setupPermTitle'), style: Theme.of(context).textTheme.headlineSmall),
+                Text(t(ui, 'setupPermSub')),
+                const SizedBox(height: 8),
+                Expanded(
+                  child: ListView(
+                    children: [
+                      SwitchListTile(
+                        contentPadding: EdgeInsets.zero,
+                        secondary: const Icon(Icons.notifications_outlined),
+                        title: Text(t(ui, 'setupAllowNotify')),
+                        subtitle: Text(t(ui, 'permNotifySub')),
+                        value: notify,
+                        onChanged: busy ? null : _askNotify,
+                      ),
+                      SwitchListTile(
+                        contentPadding: EdgeInsets.zero,
+                        secondary: const Icon(Icons.sync),
+                        title: Text(t(ui, 'setupAllowBackground')),
+                        subtitle: Text(t(ui, 'permBackgroundSub')),
+                        value: bg,
+                        onChanged: busy ? null : _askBg,
+                      ),
+                      SwitchListTile(
+                        contentPadding: EdgeInsets.zero,
+                        secondary: const Icon(Icons.rocket_launch_outlined),
+                        title: Text(t(ui, 'setupAllowAutoLaunch')),
+                        subtitle: Text(t(ui, 'autoLaunchSub')),
+                        value: auto,
+                        onChanged: busy ? null : _askAuto,
+                      ),
+                      SwitchListTile(
+                        contentPadding: EdgeInsets.zero,
+                        secondary: const Icon(Icons.location_on_outlined),
+                        title: Text(t(ui, 'setupAllowGps')),
+                        subtitle: Text(t(ui, 'permLocationSub')),
+                        value: gps,
+                        onChanged: busy ? null : _askGps,
+                      ),
+                    ],
+                  ),
+                ),
+                if (busy) ...[
+                  const LinearProgressIndicator(minHeight: 3),
+                  const SizedBox(height: 8),
+                  Text(t(ui, asking.isEmpty ? 'loading' : asking), textAlign: TextAlign.center),
+                  const SizedBox(height: 8),
+                ],
+                FilledButton(
+                  onPressed: busy ? null : _continue,
+                  child: Text(t(ui, 'setupContinue')),
+                ),
+                const SizedBox(height: 8),
+                OutlinedButton(
+                  onPressed: busy ? null : _skip,
+                  child: Text(t(ui, 'setupSkip')),
+                ),
+              ],
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}

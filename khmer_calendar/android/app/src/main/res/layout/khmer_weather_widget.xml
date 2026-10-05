@@ -1,0 +1,234 @@
+<?xml version="1.0" encoding="utf-8"?>
+<FrameLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:id="@+id/wx_root"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:background="@drawable/widget_background">
+
+    <ImageView
+        android:id="@+id/wx_photo"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:contentDescription="@null"
+        android:scaleType="centerCrop" />
+
+    <ImageView
+        android:id="@+id/wx_cloud1"
+        android:layout_width="120dp"
+        android:layout_height="44dp"
+        android:layout_gravity="top|start"
+        android:layout_marginStart="4dp"
+        android:layout_marginTop="6dp"
+        android:contentDescription="@null"
+        android:scaleType="fitStart"
+        android:src="@drawable/ic_wx_sky_cloud"
+        android:visibility="gone" />
+
+    <ImageView
+        android:id="@+id/wx_cloud2"
+        android:layout_width="100dp"
+        android:layout_height="36dp"
+        android:layout_gravity="top|end"
+        android:layout_marginTop="14dp"
+        android:layout_marginEnd="8dp"
+        android:contentDescription="@null"
+        android:scaleType="fitEnd"
+        android:src="@drawable/ic_wx_sky_cloud"
+        android:visibility="gone" />
+
+    <ImageView
+        android:id="@+id/wx_cloud3"
+        android:layout_width="140dp"
+        android:layout_height="40dp"
+        android:layout_gravity="top|center_horizontal"
+        android:layout_marginTop="28dp"
+        android:contentDescription="@null"
+        android:scaleType="fitCenter"
+        android:src="@drawable/ic_wx_sky_cloud"
+        android:visibility="gone" />
+
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:background="#88000000"
+        android:orientation="vertical"
+        android:padding="10dp">
+
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:gravity="center_vertical"
+            android:orientation="horizontal">
+            <TextView
+                android:id="@+id/wx_prev"
+                android:layout_width="28dp"
+                android:layout_height="28dp"
+                android:clickable="true"
+                android:focusable="true"
+                android:gravity="center"
+                android:text="‹"
+                android:textColor="#FFFFFFFF"
+                android:textSize="22sp" />
+            <TextView
+                android:id="@+id/wx_city"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
+                android:ellipsize="end"
+                android:gravity="center"
+                android:maxLines="1"
+                android:textColor="#FFFFFFFF"
+                android:textSize="14sp"
+                android:textStyle="bold" />
+            <TextView
+                android:id="@+id/wx_next"
+                android:layout_width="28dp"
+                android:layout_height="28dp"
+                android:clickable="true"
+                android:focusable="true"
+                android:gravity="center"
+                android:text="›"
+                android:textColor="#FFFFFFFF"
+                android:textSize="22sp" />
+        </LinearLayout>
+
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:gravity="center_vertical"
+            android:orientation="horizontal"
+            android:paddingTop="2dp">
+            <ImageView
+                android:id="@+id/wx_icon"
+                android:layout_width="42dp"
+                android:layout_height="42dp"
+                android:contentDescription="@null"
+                android:scaleType="fitCenter"
+                android:src="@drawable/ic_wx_cloudy" />
+            <TextView
+                android:id="@+id/wx_temp"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="--"
+                android:textColor="#FFFFFFFF"
+                android:textSize="32sp"
+                android:textStyle="bold" />
+        </LinearLayout>
+
+        <TextView
+            android:id="@+id/wx_label"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:ellipsize="end"
+            android:maxLines="1"
+            android:textColor="#E6FFFFFF"
+            android:textSize="13sp" />
+
+        <TextView
+            android:id="@+id/wx_range"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:textColor="#CCFFFFFF"
+            android:textSize="12sp" />
+
+        <LinearLayout
+            android:id="@+id/wx_hour"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="8dp"
+            android:orientation="horizontal"
+            android:visibility="gone">
+
+            <LinearLayout android:id="@+id/wx_hr0" android:layout_width="0dp" android:layout_height="wrap_content" android:layout_weight="1" android:gravity="center_horizontal" android:orientation="vertical">
+                <TextView android:id="@+id/wx_ht0" android:layout_width="match_parent" android:layout_height="wrap_content" android:gravity="center" android:textColor="#CCFFFFFF" android:textSize="10sp" />
+                <ImageView android:id="@+id/wx_hi0" android:layout_width="20dp" android:layout_height="20dp" android:contentDescription="@null" android:src="@drawable/ic_wx_cloudy" />
+                <TextView android:id="@+id/wx_hv0" android:layout_width="match_parent" android:layout_height="wrap_content" android:gravity="center" android:textColor="#FFFFFFFF" android:textSize="11sp" />
+            </LinearLayout>
+            <LinearLayout android:id="@+id/wx_hr1" android:layout_width="0dp" android:layout_height="wrap_content" android:layout_weight="1" android:gravity="center_horizontal" android:orientation="vertical">
+                <TextView android:id="@+id/wx_ht1" android:layout_width="match_parent" android:layout_height="wrap_content" android:gravity="center" android:textColor="#CCFFFFFF" android:textSize="10sp" />
+                <ImageView android:id="@+id/wx_hi1" android:layout_width="20dp" android:layout_height="20dp" android:contentDescription="@null" android:src="@drawable/ic_wx_cloudy" />
+                <TextView android:id="@+id/wx_hv1" android:layout_width="match_parent" android:layout_height="wrap_content" android:gravity="center" android:textColor="#FFFFFFFF" android:textSize="11sp" />
+            </LinearLayout>
+            <LinearLayout android:id="@+id/wx_hr2" android:layout_width="0dp" android:layout_height="wrap_content" android:layout_weight="1" android:gravity="center_horizontal" android:orientation="vertical">
+                <TextView android:id="@+id/wx_ht2" android:layout_width="match_parent" android:layout_height="wrap_content" android:gravity="center" android:textColor="#CCFFFFFF" android:textSize="10sp" />
+                <ImageView android:id="@+id/wx_hi2" android:layout_width="20dp" android:layout_height="20dp" android:contentDescription="@null" android:src="@drawable/ic_wx_cloudy" />
+                <TextView android:id="@+id/wx_hv2" android:layout_width="match_parent" android:layout_height="wrap_content" android:gravity="center" android:textColor="#FFFFFFFF" android:textSize="11sp" />
+            </LinearLayout>
+            <LinearLayout android:id="@+id/wx_hr3" android:layout_width="0dp" android:layout_height="wrap_content" android:layout_weight="1" android:gravity="center_horizontal" android:orientation="vertical">
+                <TextView android:id="@+id/wx_ht3" android:layout_width="match_parent" android:layout_height="wrap_content" android:gravity="center" android:textColor="#CCFFFFFF" android:textSize="10sp" />
+                <ImageView android:id="@+id/wx_hi3" android:layout_width="20dp" android:layout_height="20dp" android:contentDescription="@null" android:src="@drawable/ic_wx_cloudy" />
+                <TextView android:id="@+id/wx_hv3" android:layout_width="match_parent" android:layout_height="wrap_content" android:gravity="center" android:textColor="#FFFFFFFF" android:textSize="11sp" />
+            </LinearLayout>
+            <LinearLayout android:id="@+id/wx_hr4" android:layout_width="0dp" android:layout_height="wrap_content" android:layout_weight="1" android:gravity="center_horizontal" android:orientation="vertical">
+                <TextView android:id="@+id/wx_ht4" android:layout_width="match_parent" android:layout_height="wrap_content" android:gravity="center" android:textColor="#CCFFFFFF" android:textSize="10sp" />
+                <ImageView android:id="@+id/wx_hi4" android:layout_width="20dp" android:layout_height="20dp" android:contentDescription="@null" android:src="@drawable/ic_wx_cloudy" />
+                <TextView android:id="@+id/wx_hv4" android:layout_width="match_parent" android:layout_height="wrap_content" android:gravity="center" android:textColor="#FFFFFFFF" android:textSize="11sp" />
+            </LinearLayout>
+            <LinearLayout android:id="@+id/wx_hr5" android:layout_width="0dp" android:layout_height="wrap_content" android:layout_weight="1" android:gravity="center_horizontal" android:orientation="vertical">
+                <TextView android:id="@+id/wx_ht5" android:layout_width="match_parent" android:layout_height="wrap_content" android:gravity="center" android:textColor="#CCFFFFFF" android:textSize="10sp" />
+                <ImageView android:id="@+id/wx_hi5" android:layout_width="20dp" android:layout_height="20dp" android:contentDescription="@null" android:src="@drawable/ic_wx_cloudy" />
+                <TextView android:id="@+id/wx_hv5" android:layout_width="match_parent" android:layout_height="wrap_content" android:gravity="center" android:textColor="#FFFFFFFF" android:textSize="11sp" />
+            </LinearLayout>
+        </LinearLayout>
+
+        <LinearLayout
+            android:id="@+id/wx_week"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="8dp"
+            android:orientation="horizontal"
+            android:visibility="gone">
+
+            <LinearLayout android:id="@+id/wx_w0" android:layout_width="0dp" android:layout_height="wrap_content" android:layout_weight="1" android:gravity="center_horizontal" android:orientation="vertical">
+                <TextView android:id="@+id/wx_d0" android:layout_width="match_parent" android:layout_height="wrap_content" android:gravity="center" android:textColor="#CCFFFFFF" android:textSize="10sp" />
+                <ImageView android:id="@+id/wx_di0" android:layout_width="20dp" android:layout_height="20dp" android:contentDescription="@null" android:src="@drawable/ic_wx_cloudy" />
+                <TextView android:id="@+id/wx_dh0" android:layout_width="match_parent" android:layout_height="wrap_content" android:gravity="center" android:textColor="#FFFFFFFF" android:textSize="11sp" />
+                <TextView android:id="@+id/wx_dl0" android:layout_width="match_parent" android:layout_height="wrap_content" android:gravity="center" android:textColor="#99FFFFFF" android:textSize="10sp" />
+            </LinearLayout>
+            <LinearLayout android:id="@+id/wx_w1" android:layout_width="0dp" android:layout_height="wrap_content" android:layout_weight="1" android:gravity="center_horizontal" android:orientation="vertical">
+                <TextView android:id="@+id/wx_d1" android:layout_width="match_parent" android:layout_height="wrap_content" android:gravity="center" android:textColor="#CCFFFFFF" android:textSize="10sp" />
+                <ImageView android:id="@+id/wx_di1" android:layout_width="20dp" android:layout_height="20dp" android:contentDescription="@null" android:src="@drawable/ic_wx_cloudy" />
+                <TextView android:id="@+id/wx_dh1" android:layout_width="match_parent" android:layout_height="wrap_content" android:gravity="center" android:textColor="#FFFFFFFF" android:textSize="11sp" />
+                <TextView android:id="@+id/wx_dl1" android:layout_width="match_parent" android:layout_height="wrap_content" android:gravity="center" android:textColor="#99FFFFFF" android:textSize="10sp" />
+            </LinearLayout>
+            <LinearLayout android:id="@+id/wx_w2" android:layout_width="0dp" android:layout_height="wrap_content" android:layout_weight="1" android:gravity="center_horizontal" android:orientation="vertical">
+                <TextView android:id="@+id/wx_d2" android:layout_width="match_parent" android:layout_height="wrap_content" android:gravity="center" android:textColor="#CCFFFFFF" android:textSize="10sp" />
+                <ImageView android:id="@+id/wx_di2" android:layout_width="20dp" android:layout_height="20dp" android:contentDescription="@null" android:src="@drawable/ic_wx_cloudy" />
+                <TextView android:id="@+id/wx_dh2" android:layout_width="match_parent" android:layout_height="wrap_content" android:gravity="center" android:textColor="#FFFFFFFF" android:textSize="11sp" />
+                <TextView android:id="@+id/wx_dl2" android:layout_width="match_parent" android:layout_height="wrap_content" android:gravity="center" android:textColor="#99FFFFFF" android:textSize="10sp" />
+            </LinearLayout>
+            <LinearLayout android:id="@+id/wx_w3" android:layout_width="0dp" android:layout_height="wrap_content" android:layout_weight="1" android:gravity="center_horizontal" android:orientation="vertical">
+                <TextView android:id="@+id/wx_d3" android:layout_width="match_parent" android:layout_height="wrap_content" android:gravity="center" android:textColor="#CCFFFFFF" android:textSize="10sp" />
+                <ImageView android:id="@+id/wx_di3" android:layout_width="20dp" android:layout_height="20dp" android:contentDescription="@null" android:src="@drawable/ic_wx_cloudy" />
+                <TextView android:id="@+id/wx_dh3" android:layout_width="match_parent" android:layout_height="wrap_content" android:gravity="center" android:textColor="#FFFFFFFF" android:textSize="11sp" />
+                <TextView android:id="@+id/wx_dl3" android:layout_width="match_parent" android:layout_height="wrap_content" android:gravity="center" android:textColor="#99FFFFFF" android:textSize="10sp" />
+            </LinearLayout>
+            <LinearLayout android:id="@+id/wx_w4" android:layout_width="0dp" android:layout_height="wrap_content" android:layout_weight="1" android:gravity="center_horizontal" android:orientation="vertical">
+                <TextView android:id="@+id/wx_d4" android:layout_width="match_parent" android:layout_height="wrap_content" android:gravity="center" android:textColor="#CCFFFFFF" android:textSize="10sp" />
+                <ImageView android:id="@+id/wx_di4" android:layout_width="20dp" android:layout_height="20dp" android:contentDescription="@null" android:src="@drawable/ic_wx_cloudy" />
+                <TextView android:id="@+id/wx_dh4" android:layout_width="match_parent" android:layout_height="wrap_content" android:gravity="center" android:textColor="#FFFFFFFF" android:textSize="11sp" />
+                <TextView android:id="@+id/wx_dl4" android:layout_width="match_parent" android:layout_height="wrap_content" android:gravity="center" android:textColor="#99FFFFFF" android:textSize="10sp" />
+            </LinearLayout>
+            <LinearLayout android:id="@+id/wx_w5" android:layout_width="0dp" android:layout_height="wrap_content" android:layout_weight="1" android:gravity="center_horizontal" android:orientation="vertical">
+                <TextView android:id="@+id/wx_d5" android:layout_width="match_parent" android:layout_height="wrap_content" android:gravity="center" android:textColor="#CCFFFFFF" android:textSize="10sp" />
+                <ImageView android:id="@+id/wx_di5" android:layout_width="20dp" android:layout_height="20dp" android:contentDescription="@null" android:src="@drawable/ic_wx_cloudy" />
+                <TextView android:id="@+id/wx_dh5" android:layout_width="match_parent" android:layout_height="wrap_content" android:gravity="center" android:textColor="#FFFFFFFF" android:textSize="11sp" />
+                <TextView android:id="@+id/wx_dl5" android:layout_width="match_parent" android:layout_height="wrap_content" android:gravity="center" android:textColor="#99FFFFFF" android:textSize="10sp" />
+            </LinearLayout>
+            <LinearLayout android:id="@+id/wx_w6" android:layout_width="0dp" android:layout_height="wrap_content" android:layout_weight="1" android:gravity="center_horizontal" android:orientation="vertical">
+                <TextView android:id="@+id/wx_d6" android:layout_width="match_parent" android:layout_height="wrap_content" android:gravity="center" android:textColor="#CCFFFFFF" android:textSize="10sp" />
+                <ImageView android:id="@+id/wx_di6" android:layout_width="20dp" android:layout_height="20dp" android:contentDescription="@null" android:src="@drawable/ic_wx_cloudy" />
+                <TextView android:id="@+id/wx_dh6" android:layout_width="match_parent" android:layout_height="wrap_content" android:gravity="center" android:textColor="#FFFFFFFF" android:textSize="11sp" />
+                <TextView android:id="@+id/wx_dl6" android:layout_width="match_parent" android:layout_height="wrap_content" android:gravity="center" android:textColor="#99FFFFFF" android:textSize="10sp" />
+            </LinearLayout>
+        </LinearLayout>
+
+        <TextView
+            android:id="@+id/wx_count"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:gravity="end"
+            android:textColor="#99FFFFFF"
+            android:textSize="11sp" />
+    </LinearLayout>
+</FrameLayout>

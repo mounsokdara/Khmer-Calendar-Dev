@@ -1,0 +1,233 @@
+package com.mounsokdara.khmercalendar
+
+import android.app.PendingIntent
+import android.appwidget.AppWidgetManager
+import android.appwidget.AppWidgetProvider
+import android.content.ComponentName
+import android.content.Context
+import android.content.Intent
+import android.graphics.Color
+import android.text.SpannableString
+import android.text.Spanned
+import android.text.style.AbsoluteSizeSpan
+import android.view.View
+import android.widget.RemoteViews
+import org.json.JSONObject
+import java.util.Calendar
+
+class MonthWidgetProvider : AppWidgetProvider() {
+    override fun onUpdate(context: Context, appWidgetManager: AppWidgetManager, appWidgetIds: IntArray) {
+        for (id in appWidgetIds) {
+            appWidgetManager.updateAppWidget(id, build(context, id))
+        }
+    }
+
+    override fun onReceive(context: Context, intent: Intent) {
+        super.onReceive(context, intent)
+        val action = intent.action ?: return
+        if (action == ACTION_SHIFT) {
+            val widgetId = intent.getIntExtra(AppWidgetManager.EXTRA_APPWIDGET_ID, AppWidgetManager.INVALID_APPWIDGET_ID)
+            val unit = intent.getStringExtra(EXTRA_UNIT) ?: "month"
+            val dir = intent.getIntExtra(EXTRA_DIR, 0)
+            if (unit == "today") goToday(context, widgetId) else shift(context, widgetId, unit, dir)
+            if (widgetId != AppWidgetManager.INVALID_APPWIDGET_ID) {
+                AppWidgetManager.getInstance(context).updateAppWidget(widgetId, build(context, widgetId))
+            } else {
+                refreshAll(context)
+            }
+            return
+        }
+        if (action == Intent.ACTION_DATE_CHANGED ||
+            action == Intent.ACTION_TIMEZONE_CHANGED ||
+            action == Intent.ACTION_TIME_CHANGED ||
+            action == Intent.ACTION_BOOT_COMPLETED ||
+            action == AppWidgetManager.ACTION_APPWIDGET_UPDATE
+        ) {
+            refreshAll(context)
+        }
+    }
+
+    companion object {
+        const val ACTION_SHIFT = "com.mounsokdara.khmercalendar.MONTH_SHIFT"
+        const val EXTRA_UNIT = "unit"
+        const val EXTRA_DIR = "dir"
+        private val COLOR_TODAY = Color.parseColor("#FFFFD54F")
+        private val COLOR_PUBLIC = Color.parseColor("#FFFF8A80")
+        private val COLOR_OTHER = Color.parseColor("#FF90CAF9")
+        private val COLOR_DIM = Color.parseColor("#66FFFFFF")
+
+        fun refreshAll(context: Context) {
+            val mgr = AppWidgetManager.getInstance(context)
+            val ids = mgr.getAppWidgetIds(ComponentName(context, MonthWidgetProvider::class.java))
+            for (id in ids) mgr.updateAppWidget(id, build(context, id))
+        }
+
+        private fun shown(context: Context, widgetId: Int): Pair<Int, Int> {
+            val p = WidgetStore.prefs(context)
+            val now = Calendar.getInstance()
+            val y = p.getInt("month_y_$widgetId", now.get(Calendar.YEAR))
+            val m = p.getInt("month_m_$widgetId", now.get(Calendar.MONTH) + 1)
+            return y to m
+        }
+
+        private fun goToday(context: Context, widgetId: Int) {
+            if (widgetId == AppWidgetManager.INVALID_APPWIDGET_ID) return
+            val now = Calendar.getInstance()
+            WidgetStore.prefs(context).edit()
+                .putInt("month_y_$widgetId", now.get(Calendar.YEAR))
+                .putInt("month_m_$widgetId", now.get(Calendar.MONTH) + 1)
+                .apply()
+        }
+
+        private fun shift(context: Context, widgetId: Int, unit: String, dir: Int) {
+            if (widgetId == AppWidgetManager.INVALID_APPWIDGET_ID) return
+            val (y0, m0) = shown(context, widgetId)
+            val cal = Calendar.getInstance()
+            cal.set(Calendar.DAY_OF_MONTH, 1)
+            cal.set(Calendar.YEAR, y0)
+            cal.set(Calendar.MONTH, m0 - 1)
+            if (unit == "year") cal.add(Calendar.YEAR, dir) else cal.add(Calendar.MONTH, dir)
+            WidgetStore.prefs(context).edit()
+                .putInt("month_y_$widgetId", cal.get(Calendar.YEAR))
+                .putInt("month_m_$widgetId", cal.get(Calendar.MONTH) + 1)
+                .apply()
+        }
+
+        private fun shiftPi(context: Context, widgetId: Int, unit: String, dir: Int, req: Int): PendingIntent {
+            val intent =
+                Intent(context, MonthWidgetProvider::class.java)
+                    .setAction(ACTION_SHIFT)
+                    .putExtra(AppWidgetManager.EXTRA_APPWIDGET_ID, widgetId)
+                    .putExtra(EXTRA_UNIT, unit)
+                    .putExtra(EXTRA_DIR, dir)
+            val flags = PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
+            return PendingIntent.getBroadcast(context, req + widgetId * 10, intent, flags)
+        }
+
+        private fun gridStart(year: Int, month: Int, weekStartsOn: Int): Calendar {
+            val first = Calendar.getInstance()
+            first.set(Calendar.YEAR, year)
+            first.set(Calendar.MONTH, month - 1)
+            first.set(Calendar.DAY_OF_MONTH, 1)
+            first.set(Calendar.HOUR_OF_DAY, 0)
+            first.set(Calendar.MINUTE, 0)
+            first.set(Calendar.SECOND, 0)
+            first.set(Calendar.MILLISECOND, 0)
+            val firstDow = first.get(Calendar.DAY_OF_WEEK) - 1
+            val offset = (firstDow - weekStartsOn + 7) % 7
+            first.add(Calendar.DATE, -offset)
+            return first
+        }
+
+        private fun isoOf(cal: Calendar): String {
+            return "%04d-%02d-%02d".format(
+                cal.get(Calendar.YEAR),
+                cal.get(Calendar.MONTH) + 1,
+                cal.get(Calendar.DAY_OF_MONTH),
+            )
+        }
+
+        private fun marks(context: Context): JSONObject {
+            val raw = WidgetStore.prefs(context).getString("marks", null) ?: return JSONObject()
+            return try {
+                JSONObject(raw)
+            } catch (_: Exception) {
+                JSONObject()
+            }
+        }
+
+        private fun names(context: Context): JSONObject {
+            val raw = WidgetStore.prefs(context).getString("names", null) ?: return JSONObject()
+            return try {
+                JSONObject(raw)
+            } catch (_: Exception) {
+                JSONObject()
+            }
+        }
+
+        private fun cellId(context: Context, i: Int): Int {
+            return context.resources.getIdentifier("cell_$i", "id", context.packageName)
+        }
+
+        private fun silId(context: Context, i: Int): Int {
+            return context.resources.getIdentifier("sil_$i", "id", context.packageName)
+        }
+
+        private fun headId(context: Context, i: Int): Int {
+            return context.resources.getIdentifier("head_$i", "id", context.packageName)
+        }
+
+        private fun cellLabel(day: Int, name: String): CharSequence {
+            val num = day.toString()
+            if (name.isEmpty()) return num
+            val s = SpannableString("$num\n$name")
+            s.setSpan(AbsoluteSizeSpan(8, true), num.length + 1, s.length, Spanned.SPAN_EXCLUSIVE_EXCLUSIVE)
+            return s
+        }
+
+        private fun build(context: Context, widgetId: Int): RemoteViews {
+            val views = RemoteViews(context.packageName, R.layout.khmer_month_widget)
+            val lang = WidgetStore.lang(context)
+            val weekStart = WidgetStore.weekStartsOn(context)
+            val (year, month) = shown(context, widgetId)
+            val months = if (lang == "en") WidgetStore.MONTHS_EN else WidgetStore.MONTHS_KM
+            val short = if (lang == "en") WidgetStore.WEEK_SHORT_EN else WidgetStore.WEEK_SHORT_KM
+            val markMap = marks(context)
+            val nameMap = names(context)
+            views.setTextViewText(R.id.month_year, year.toString())
+            views.setTextViewText(R.id.month_name, months[(month - 1).coerceIn(0, 11)])
+            views.setTextViewText(R.id.month_today, if (lang == "en") "Today" else "ថ្ងៃនេះ")
+            val today = Calendar.getInstance()
+            val onThisMonth =
+                year == today.get(Calendar.YEAR) && month == today.get(Calendar.MONTH) + 1
+            views.setViewVisibility(R.id.month_today, if (onThisMonth) View.GONE else View.VISIBLE)
+            for (i in 0 until 7) {
+                val idx = (weekStart + i) % 7
+                views.setTextViewText(headId(context, i), short[idx])
+            }
+            val start = gridStart(year, month, weekStart)
+            for (i in 0 until 42) {
+                val d = start.clone() as Calendar
+                d.add(Calendar.DATE, i)
+                val inMonth = d.get(Calendar.MONTH) == month - 1
+                val isToday =
+                    d.get(Calendar.YEAR) == today.get(Calendar.YEAR) &&
+                        d.get(Calendar.MONTH) == today.get(Calendar.MONTH) &&
+                        d.get(Calendar.DAY_OF_MONTH) == today.get(Calendar.DAY_OF_MONTH)
+                val flags = markMap.optString(isoOf(d), "")
+                val sunday = d.get(Calendar.DAY_OF_WEEK) == Calendar.SUNDAY
+                val id = cellId(context, i)
+                val name = if (inMonth) nameMap.optString(isoOf(d), "") else ""
+                views.setTextViewText(id, cellLabel(d.get(Calendar.DAY_OF_MONTH), name))
+                views.setInt(id, "setMaxLines", 3)
+                val color =
+                    when {
+                        isToday -> COLOR_TODAY
+                        !inMonth -> COLOR_DIM
+                        flags.contains('h') -> COLOR_OTHER
+                        flags.contains('p') || sunday -> COLOR_PUBLIC
+                        else -> Color.WHITE
+                    }
+                views.setTextColor(id, color)
+                views.setViewVisibility(
+                    silId(context, i),
+                    if (inMonth && flags.contains('s')) View.VISIBLE else View.GONE,
+                )
+                views.setOnClickPendingIntent(
+                    id,
+                    WidgetStore.launch(context, "today", isoOf(d)),
+                )
+            }
+            views.setOnClickPendingIntent(R.id.year_prev, shiftPi(context, widgetId, "year", -1, 1))
+            views.setOnClickPendingIntent(R.id.year_next, shiftPi(context, widgetId, "year", 1, 2))
+            views.setOnClickPendingIntent(R.id.month_prev, shiftPi(context, widgetId, "month", -1, 3))
+            views.setOnClickPendingIntent(R.id.month_next, shiftPi(context, widgetId, "month", 1, 4))
+            views.setOnClickPendingIntent(R.id.month_today, shiftPi(context, widgetId, "today", 0, 5))
+            val openCalendar = WidgetStore.launch(context, "calendar")
+            views.setOnClickPendingIntent(R.id.month_root, openCalendar)
+            views.setOnClickPendingIntent(R.id.month_year, openCalendar)
+            views.setOnClickPendingIntent(R.id.month_name, openCalendar)
+            return views
+        }
+    }
+}
