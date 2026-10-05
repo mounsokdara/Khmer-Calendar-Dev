@@ -1,0 +1,71 @@
+# Windows: build, Authenticode-sign, bundle the Visual C++ runtime and zip the app.
+# Also builds the Microsoft Store .msix when the Store identity variables are set.
+# Runs on its own (Actions tab > Run workflow) or is called by release.yml.
+name: Windows
+
+on:
+  workflow_call:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  windows:
+    runs-on: windows-latest
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@v4
+      - uses: subosito/flutter-action@v2
+        with:
+          flutter-version: "3.47.4"
+          channel: stable
+          cache: true
+      - run: flutter pub get
+        working-directory: khmer_calendar
+      - run: flutter build windows --release
+        working-directory: khmer_calendar
+        env:
+          CXXFLAGS: /D_SILENCE_EXPERIMENTAL_COROUTINE_DEPRECATION_WARNINGS
+      - name: Sign windows (Authenticode)
+        shell: pwsh
+        env:
+          PFX_B64: ${{ secrets.DESKTOP_SIGN_PFX_BASE64 }}
+          PFX_PASS: ${{ secrets.DESKTOP_SIGN_PASSWORD }}
+        run: ./scripts/sign-windows.ps1 -Dir khmer_calendar\build\windows\x64\runner\Release
+      # After signing on purpose: these are Microsoft-signed and must stay that way.
+      - name: Bundle Visual C++ runtime (so it runs without the redistributable installed)
+        shell: pwsh
+        run: ./scripts/bundle-vcruntime.ps1 -Dir khmer_calendar\build\windows\x64\runner\Release
+      - name: Pack windows
+        shell: pwsh
+        run: Compress-Archive -Path khmer_calendar\build\windows\x64\runner\Release\* -DestinationPath KhmerCalendar-windows.zip
+      - name: Verify package (runtime DLLs + icon)
+        shell: pwsh
+        run: ./scripts/verify-windows.ps1 -Zip KhmerCalendar-windows.zip
+      - uses: actions/upload-artifact@v4
+        with:
+          name: windows
+          path: KhmerCalendar-windows.zip
+      # Microsoft Store package. Needs the three values from Partner Center (Product >
+      # Product identity) saved as repository variables: Settings > Secrets and variables >
+      # Actions > Variables. Without them this step is skipped. See docs/WINDOWS-STORE.md.
+      - name: Package for Microsoft Store (MSIX)
+        if: ${{ vars.MSIX_IDENTITY_NAME != '' && vars.MSIX_PUBLISHER != '' && vars.MSIX_PUBLISHER_DISPLAY_NAME != '' }}
+        shell: pwsh
+        working-directory: khmer_calendar
+        env:
+          MSIX_IDENTITY_NAME: ${{ vars.MSIX_IDENTITY_NAME }}
+          MSIX_PUBLISHER: ${{ vars.MSIX_PUBLISHER }}
+          MSIX_PUBLISHER_DISPLAY_NAME: ${{ vars.MSIX_PUBLISHER_DISPLAY_NAME }}
+        run: ../scripts/package-msix.ps1 -IdentityName $env:MSIX_IDENTITY_NAME -Publisher $env:MSIX_PUBLISHER -PublisherDisplayName $env:MSIX_PUBLISHER_DISPLAY_NAME -OutDir ${{ runner.temp }}\msix
+      - name: MSIX skipped (no Store identity yet)
+        if: ${{ vars.MSIX_IDENTITY_NAME == '' || vars.MSIX_PUBLISHER == '' || vars.MSIX_PUBLISHER_DISPLAY_NAME == '' }}
+        shell: pwsh
+        run: Write-Host "::notice title=MSIX skipped::Set repository variables MSIX_IDENTITY_NAME, MSIX_PUBLISHER, MSIX_PUBLISHER_DISPLAY_NAME (see docs/WINDOWS-STORE.md)"
+      - uses: actions/upload-artifact@v4
+        if: ${{ vars.MSIX_IDENTITY_NAME != '' && vars.MSIX_PUBLISHER != '' && vars.MSIX_PUBLISHER_DISPLAY_NAME != '' }}
+        with:
+          name: windows-msix
+          path: ${{ runner.temp }}\msix\*.msix
+          if-no-files-found: error

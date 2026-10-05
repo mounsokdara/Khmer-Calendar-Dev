@@ -1,0 +1,91 @@
+<!DOCTYPE html>
+<html lang="km">
+<head>
+  <base href="$FLUTTER_BASE_HREF">
+  <meta charset="UTF-8">
+  <meta content="IE=Edge" http-equiv="X-UA-Compatible">
+  <meta name="description" content="Khmer lunar calendar, holy days, holidays, weather, and reminders.">
+  <meta property="og:type" content="website">
+  <meta property="og:title" content="ប្រតិទិនខ្មែរ">
+  <meta property="og:description" content="Khmer lunar calendar, holy days, holidays, weather, and reminders.">
+  <meta property="og:image" content="https://khmercalendar.pages.dev/og.jpg">
+  <meta property="og:image:width" content="1200">
+  <meta property="og:image:height" content="630">
+  <meta name="twitter:card" content="summary_large_image">
+  <meta name="twitter:title" content="ប្រតិទិនខ្មែរ">
+  <meta name="twitter:description" content="Khmer lunar calendar, holy days, holidays, weather, and reminders.">
+  <meta name="twitter:image" content="https://khmercalendar.pages.dev/og.jpg">
+  <meta name="theme-color" content="#9A3B38">
+  <meta name="mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="apple-mobile-web-app-title" content="ប្រតិទិនខ្មែរ">
+  <link rel="apple-touch-icon" href="icons/Icon-192.png">
+  <link rel="icon" type="image/png" href="favicon.png"/>
+  <title>ប្រតិទិនខ្មែរ</title>
+  <link rel="manifest" href="manifest.json">
+  <style>
+    html, body { height: 100%; margin: 0; background: #9a3b38; color: #fff; font-family: "Kantumruy Pro", system-ui, sans-serif; }
+    .boot { min-height: 100%; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 12px; background: linear-gradient(165deg,#d9786c 0%,#9a3b38 42%,#5c1a1c 78%,#3a0f14 100%); position: relative; overflow: hidden; }
+    .boot h1 { font-size: 1.85rem; margin: 0; font-weight: 700; }
+    .boot p { margin: 0; opacity: .78; }
+    .boot-bar { width: min(72vw, 260px); height: 4px; border-radius: 99px; background: #ffffff47; overflow: hidden; margin-top: 20px; }
+    .boot-bar > span { display: block; height: 100%; width: 32%; background: #fff; border-radius: inherit; animation: bootfill 1.2s linear infinite; }
+    @keyframes bootfill { 0% { width: 8%; } 100% { width: 92%; } }
+  </style>
+</head>
+<body>
+  <div class="boot" id="boot">
+    <h1>ប្រតិទិនខ្មែរ</h1>
+    <p>ប្រតិទិនចន្ទគតិខ្មែរ</p>
+    <div class="boot-bar" aria-hidden="true"><span></span></div>
+  </div>
+  <script>
+    (function () {
+      // Browser haptics bridge for Flutter web. Feature detection is required:
+      // unsupported browsers simply return false and do nothing.
+      window.__khmerHapticsTick = function () {
+        if (!('vibrate' in navigator)) return false;
+        try {
+          return navigator.vibrate(8);
+        } catch (_) {
+          return false;
+        }
+      };
+
+      window.__khmerInstall = {
+        deferred: null,
+        isStandalone: function () {
+          return window.matchMedia('(display-mode: standalone)').matches
+            || window.navigator.standalone === true;
+        },
+        hasPrompt: function () { return !!window.__khmerInstall.deferred; },
+        promptInstall: async function () {
+          var e = window.__khmerInstall.deferred;
+          if (!e) return false;
+          window.__khmerInstall.deferred = null;
+          await e.prompt();
+          var choice = await e.userChoice;
+          return !!(choice && choice.outcome === 'accepted');
+        }
+      };
+      window.addEventListener('beforeinstallprompt', function (e) {
+        e.preventDefault();
+        window.__khmerInstall.deferred = e;
+      });
+      window.addEventListener('appinstalled', function () {
+        window.__khmerInstall.deferred = null;
+      });
+      if ('serviceWorker' in navigator) {
+        window.addEventListener('load', function () {
+          navigator.serviceWorker.register('offline.js').catch(function () {});
+        });
+      }
+      window.addEventListener("flutter-first-frame", function () {
+        var boot = document.getElementById("boot");
+        if (boot) boot.remove();
+      });
+    })();
+  </script>
+  <script src="flutter_bootstrap.js" async></script>
+</body>
+</html>

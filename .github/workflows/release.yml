@@ -1,0 +1,128 @@
+name: Release
+
+on:
+  workflow_dispatch:
+
+concurrency:
+  group: release
+  cancel-in-progress: true
+permissions:
+  contents: write
+
+
+jobs:
+  # Per-platform build + sign lives in its own file (also runnable on its own).
+  android:
+    uses: ./.github/workflows/android.yml
+    secrets: inherit
+
+  linux:
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@v4
+      - uses: subosito/flutter-action@v2
+        with:
+          flutter-version: "3.47.4"
+          channel: stable
+          cache: true
+      - name: Linux toolchain
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y --no-install-recommends clang cmake ninja-build pkg-config libgtk-3-dev liblzma-dev libstdc++-12-dev libgstreamer1.0-dev libgstreamer-plugins-base1.0-dev
+      - run: flutter pub get
+        working-directory: khmer_calendar
+      - run: flutter build linux --release
+        working-directory: khmer_calendar
+      - name: Pack linux
+        run: |
+          tar -C khmer_calendar/build/linux/x64/release/bundle -czf KhmerCalendar-linux.tar.gz .
+      - uses: actions/upload-artifact@v4
+        with:
+          name: linux
+          path: KhmerCalendar-linux.tar.gz
+
+  windows:
+    uses: ./.github/workflows/windows.yml
+    secrets: inherit
+
+  macos:
+    uses: ./.github/workflows/macos.yml
+    secrets: inherit
+
+  project:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - name: Pack source
+        run: |
+          git archive --format=zip --output KhmerCalendar-project.zip HEAD
+      - uses: actions/upload-artifact@v4
+        with:
+          name: project
+          path: KhmerCalendar-project.zip
+
+  web:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+      - uses: subosito/flutter-action@v2
+        with:
+          flutter-version: "3.47.4"
+          channel: stable
+          cache: true
+      - run: flutter pub get
+        working-directory: khmer_calendar
+      - run: flutter build web --release --web-resources-cdn --base-href /
+        working-directory: khmer_calendar
+      - name: Pack web
+        run: |
+          (cd khmer_calendar/build/web && zip -r "$GITHUB_WORKSPACE/KhmerCalendar-web.zip" .)
+          mkdir -p dist
+          cp -a khmer_calendar/build/web/. dist/
+      - uses: actions/upload-artifact@v4
+        with:
+          name: web
+          path: KhmerCalendar-web.zip
+
+  release:
+    needs: [android, linux, windows, macos, project, web]
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/download-artifact@v4
+        with:
+          path: dist
+      - name: Stage files
+        run: |
+          mkdir -p release-files
+          cp dist/android/app-release.apk release-files/KhmerCalendar.apk
+          cp dist/windows/KhmerCalendar-windows.zip release-files/KhmerCalendar-windows.zip
+          cp dist/macos/KhmerCalendar.dmg release-files/KhmerCalendar.dmg
+          cp dist/linux/KhmerCalendar-linux.tar.gz release-files/KhmerCalendar-linux.tar.gz
+          cp dist/project/KhmerCalendar-project.zip release-files/KhmerCalendar-project.zip
+          cp dist/web/KhmerCalendar-web.zip release-files/KhmerCalendar-web.zip
+          ls -lh release-files
+      - name: Publish GitHub Release
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          set -euo pipefail
+          VERSION=$(grep -m1 '^version:' khmer_calendar/pubspec.yaml | sed 's/^version:[[:space:]]*//; s/+.*//')
+          TAG="v${VERSION}"
+          NOTES_FILE=".github/release-body.md"
+          echo "Publishing ${TAG}"
+          gh release delete "$TAG" --yes --cleanup-tag || true
+          gh release create "$TAG" \
+            release-files/KhmerCalendar.apk \
+            release-files/KhmerCalendar-windows.zip \
+            release-files/KhmerCalendar.dmg \
+            release-files/KhmerCalendar-linux.tar.gz \
+            release-files/KhmerCalendar-project.zip \
+            release-files/KhmerCalendar-web.zip \
+            --target "$GITHUB_SHA" \
+            --title "Khmer Calendar $TAG" \
+            --notes-file "$NOTES_FILE" \
+            --latest

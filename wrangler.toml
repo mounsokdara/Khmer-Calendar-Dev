@@ -1,0 +1,5 @@
+name = "khmercalendar"
+compatibility_date = "2026-01-15"
+# Cloudflare Pages builds this from source on every commit (build command:
+# `bash tools/cf-build.sh`). Nothing generated is committed to the repo.
+pages_build_output_dir = "./khmer_calendar/build/web"

@@ -1,14 +1,50 @@
-# Khmer Calendar (Dev, Android only)
+# Khmer Calendar
 
-Dev build of [Khmer Calendar](https://github.com/mounsokdara/Khmer-Calendar) for Android.
+Native Flutter Khmer lunar calendar for phone and desktop. Holy days, national holidays, weather, reminders and a bunch of cool features.
 
-- Package: `com.mounsokdara.khmercalendar` (same as production; uninstall it first)
-- Code: current public main of Khmer-Calendar (00f7fa7), Android only
-- Built and signed by the **Android Dev** workflow on every push to `main`
-- Download: [Releases > dev-latest](../../releases/tag/dev-latest)
+**Visit this Website for demo:** [khmercalendar.pages.dev](https://khmercalendar.pages.dev)
+## Run app
 
 ```bash
 cd khmer_calendar
 flutter pub get
-KHMER_DEV=true flutter run
+flutter run
 ```
+
+To run the web version:
+
+```bash
+cd khmer_calendar
+flutter run -d chrome
+```
+
+## Download:
+[In my GitHub Releases](https://github.com/mounsokdara/Khmer-Calendar/releases/latest)
+
+## Privacy
+[Privacy Policy](PRIVACY.md): no accounts, ads or analytics; your data stays on your device.
+
+## Code signing policy
+I have applied to the SignPath Foundation for free code signing of the Windows app; no release is signed by it yet, so Windows may show "Unknown publisher" until then. Roles, scope and how signing will work: [Code signing policy](docs/CODE-SIGNING-POLICY.md).
+
+## Deploy (Cloudflare Pages, built from source)
+
+Full guide: [docs/DEPLOY.md](docs/DEPLOY.md).
+
+The website is generated on Cloudflare from `khmer_calendar/` on every commit. No GitHub Actions deploy and no generated files in the repo.
+
+Dashboard: *Workers & Pages > khmercalendar > Settings > Builds*:
+
+| Setting | Value |
+|---|---|
+| Production branch | `main` |
+| Framework preset | None |
+| Build command | `bash tools/cf-build.sh` |
+| Build output directory | `khmer_calendar/build/web` (also set in `wrangler.toml`) |
+| Root directory | *(empty)* |
+
+Environment variables (Production and Preview):
+
+| Variable | Value | Purpose |
+|---|---|---|
+| `FLUTTER_VERSION` | optional, e.g. `3.47.4` | Pin Flutter (default `3.47.4`, same as the Release workflow). |
