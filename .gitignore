@@ -18,3 +18,4 @@ key.properties
 .DS_Store
 *.log
 .wrangler/
+wrangler.toml
