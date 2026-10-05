@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 
 import '../home_screen.dart';
@@ -47,24 +49,36 @@ class _WeatherPageState extends State<WeatherPage> {
     if (mounted) setState(() {});
   }
 
+  bool _again = false;
+
   Future<void> _refresh() async {
     if (NetStatus.isOffline) {
       if (mounted) setState(() => _loading = false);
       return;
     }
+    if (_loading) {
+      // A refresh is already running; run once more when it finishes (e.g. a city was just added).
+      _again = true;
+      return;
+    }
     setState(() => _loading = true);
-    for (final id in widget.store.weatherCities) {
+    final ids = List<String>.of(widget.store.weatherCities);
+    await Future.wait(ids.map((id) async {
       final city = cityById(id);
-      if (city == null) continue;
+      if (city == null) return;
       try {
         _cache[id] = await fetchWeather(city);
         _err.remove(id);
       } catch (_) {
         _err[id] = 'fail';
       }
-    }
-    await pushWeatherList(widget.store, _cache);
+    }));
     if (mounted) setState(() => _loading = false);
+    unawaited(pushWeatherList(widget.store, _cache));
+    if (_again && mounted) {
+      _again = false;
+      unawaited(_refresh());
+    }
   }
 
   @override

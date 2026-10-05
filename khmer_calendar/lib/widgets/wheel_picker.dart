@@ -5,14 +5,11 @@ import '../dates.dart';
 import '../i18n.dart';
 import '../store.dart';
 
-const wheelYearStart = 1970;
-const wheelYearEnd = 2050;
-
 Future<void> showMonthWheel(BuildContext context, {required AppStore store}) async {
   final lang = store.lang;
   final cursor = fromIso(store.cursor);
   final months = monthsOf(lang);
-  final years = [for (var y = wheelYearStart; y <= wheelYearEnd; y++) '$y'];
+  final years = [for (var y = calendarStartYear; y <= calendarEndYear; y++) '$y'];
   final picked = await showScrollPickerDialog(
     context,
     title: FittedBox(
@@ -20,7 +17,7 @@ Future<void> showMonthWheel(BuildContext context, {required AppStore store}) asy
       alignment: Alignment.centerLeft,
       child: Text(t(lang, 'wheelTitleMonthYear'), maxLines: 1),
     ),
-    initialIndices: [cursor.month - 1, cursor.year.clamp(wheelYearStart, wheelYearEnd) - wheelYearStart],
+    initialIndices: [cursor.month - 1, cursor.year.clamp(calendarStartYear, calendarEndYear) - calendarStartYear],
     columnsBuilder: (_) => [
       ScrollPickerColumnSpec(
         labels: months,
@@ -36,15 +33,15 @@ Future<void> showMonthWheel(BuildContext context, {required AppStore store}) asy
     confirmLabel: t(lang, 'change'),
   );
   if (picked == null) return;
-  store.setCursor(isoOf(DateTime(wheelYearStart + picked[1], picked[0] + 1, 1)));
+  store.setCursor(isoOf(DateTime(calendarStartYear + picked[1], picked[0] + 1, 1)));
 }
 
-Future<int?> showYearWheel(BuildContext context, {required Lang lang, required int year}) async {
-  final years = [for (var y = wheelYearStart; y <= wheelYearEnd; y++) '$y'];
+Future<int?> showYearWheel(BuildContext context, {required Lang lang, required int year, String? title}) async {
+  final years = [for (var y = calendarStartYear; y <= calendarEndYear; y++) '$y'];
   final picked = await showScrollPickerDialog(
     context,
-    title: Text(t(lang, 'wheelTitleEventYear')),
-    initialIndices: [year.clamp(wheelYearStart, wheelYearEnd) - wheelYearStart],
+    title: Text(title ?? t(lang, 'wheelTitleEventYear')),
+    initialIndices: [year.clamp(calendarStartYear, calendarEndYear) - calendarStartYear],
     columnsBuilder: (_) => [
       ScrollPickerColumnSpec(
         labels: years,
@@ -57,5 +54,5 @@ Future<int?> showYearWheel(BuildContext context, {required Lang lang, required i
     width: 280,
   );
   if (picked == null) return null;
-  return wheelYearStart + picked[0];
+  return calendarStartYear + picked[0];
 }

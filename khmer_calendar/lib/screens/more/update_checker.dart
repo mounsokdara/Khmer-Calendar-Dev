@@ -3,7 +3,9 @@ import 'dart:convert';
 import 'package:http/http.dart' as http;
 import 'package:url_launcher/url_launcher.dart';
 
-const currentAppVersion = '1.0.2';
+import '../../theme.dart' show appVersion;
+
+const currentAppVersion = appVersion;
 const latestReleaseUrl = 'https://github.com/mounsokdara/Khmer-Calendar/releases/latest';
 
 class UpdateInfo {

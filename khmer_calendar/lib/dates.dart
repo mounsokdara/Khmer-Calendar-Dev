@@ -1,8 +1,8 @@
 import 'calendar/chhankitek.dart';
 import 'i18n.dart';
 
-const calendarStartYear = 1900;
-const calendarEndYear = 2100;
+const calendarStartYear = 1;
+const calendarEndYear = 9999;
 
 int monthIndexOf(DateTime d) => (d.year - calendarStartYear) * 12 + (d.month - 1);
 

@@ -71,7 +71,7 @@ class _DateCalcPageState extends State<DateCalcPage> {
               subtitle: Text(from),
               trailing: const Icon(Icons.event),
               onTap: () async {
-                final p = await showDatePicker(context: context, initialDate: a, firstDate: DateTime(1900), lastDate: DateTime(2100));
+                final p = await showDatePicker(context: context, initialDate: a, firstDate: DateTime(calendarStartYear), lastDate: DateTime(calendarEndYear, 12, 31));
                 if (p != null) setState(() => from = isoOf(p));
               },
             ),
@@ -85,7 +85,7 @@ class _DateCalcPageState extends State<DateCalcPage> {
               subtitle: Text(to),
               trailing: const Icon(Icons.event),
               onTap: () async {
-                final p = await showDatePicker(context: context, initialDate: b, firstDate: DateTime(1900), lastDate: DateTime(2100));
+                final p = await showDatePicker(context: context, initialDate: b, firstDate: DateTime(calendarStartYear), lastDate: DateTime(calendarEndYear, 12, 31));
                 if (p != null) setState(() => to = isoOf(p));
               },
             ),

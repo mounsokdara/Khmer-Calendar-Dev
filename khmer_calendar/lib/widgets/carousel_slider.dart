@@ -1,11 +1,6 @@
 import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
 
-
-
-
-
-
 class CarouselSlider extends StatefulWidget {
   const CarouselSlider({
     super.key,
@@ -13,22 +8,14 @@ class CarouselSlider extends StatefulWidget {
     required this.index,
     required this.itemBuilder,
     this.onIndexChanged,
-    this.physics,
-    this.allowImplicitScrolling = false,
   });
 
   final int itemCount;
-
-
 
   final int index;
 
   final IndexedWidgetBuilder itemBuilder;
   final ValueChanged<int>? onIndexChanged;
-  final ScrollPhysics? physics;
-
-
-  final bool allowImplicitScrolling;
 
   @override
   State<CarouselSlider> createState() => _CarouselSliderState();
@@ -90,9 +77,7 @@ class _CarouselSliderState extends State<CarouselSlider> {
       child: PageView.builder(
         controller: _controller,
         itemCount: widget.itemCount,
-        allowImplicitScrolling: widget.allowImplicitScrolling,
         onPageChanged: _onPage,
-        physics: widget.physics,
         itemBuilder: widget.itemBuilder,
       ),
     );

@@ -27,7 +27,7 @@ bool get canPinHomeWidget {
 }
 
 String _widgetDisplaySig(AppStore store) =>
-    '${store.lang}|${store.weekStartsOn}|${store.events.map((e) => '${e.id}:${e.date}:${e.endDate}').join(',')}|${todayIso()}';
+    '${store.lang}|${store.weekStartsOn}|${store.events.map((e) => '${e.id}:${e.date}:${e.endDate}:${e.title}').join(',')}|${todayIso()}';
 
 String _widgetNotifySig(AppStore store) =>
     '${store.notifyOn}|${store.notifyDaily}|${store.notifySil}|${store.notifyPublic}|${store.notifyOthers}|${store.notifyTasks}|${store.events.map((e) => '${e.id}:${e.date}:${e.endDate}:${e.startTime}:${e.reminderDate}:${e.reminderTime}:${e.done}:${e.title}').join(',')}';
@@ -59,13 +59,35 @@ void applyWidgetLaunch(AppStore store, Object? raw) {
   store.applyLaunch(tab: tab, date: date);
 }
 
+bool _syncBusy = false;
+bool _syncQueued = false;
+
+/// Pushes calendar data to the Android widgets. Calls made while a sync is running are merged
+/// into one follow-up run, so rapid changes never pile up heavy work.
 Future<void> syncHomeWidget(AppStore store) async {
   if (!canPinHomeWidget) return;
+  if (_syncBusy) {
+    _syncQueued = true;
+    return;
+  }
+  _syncBusy = true;
+  try {
+    do {
+      _syncQueued = false;
+      await _syncHomeWidgetOnce(store);
+    } while (_syncQueued);
+  } catch (_) {
+  } finally {
+    _syncBusy = false;
+  }
+}
+
+Future<void> _syncHomeWidgetOnce(AppStore store) async {
   final displaySig = _widgetDisplaySig(store);
   final notifySig = _widgetNotifySig(store);
   if (displaySig == _displaySig && notifySig == _notifySig) return;
   if (displaySig != _displaySig || _displayPayload == null) {
-    _displayPayload = _buildWidgetDisplay(store);
+    _displayPayload = await _buildWidgetDisplay(store);
     _displaySig = displaySig;
   }
   _notifySig = notifySig;
@@ -108,14 +130,12 @@ Map<String, String> _dayNotifyFields(DateTime d, Lang lang, List<CalendarEvent> 
   };
 }
 
-Map<String, dynamic> _buildWidgetDisplay(AppStore store) {
+/// Everything that does not depend on the user's events. It scans ~11 years of lunar days and
+/// holiday tables, so it must run in a background isolate (never on the UI thread).
+Map<String, Object> _staticWidgetIsolate(bool en) {
+  final lang = en ? Lang.en : Lang.km;
+  IntlHelper.localeName = en ? 'en' : 'km';
   final now = DateTime.now();
-  final iso = todayIso();
-  final lunar = lunarOf(now);
-  final lang = store.lang;
-  final lunarText = lang == Lang.en ? lunarLabel(iso, lang) : lunar.lunarDateText;
-  final hols = observancesOn(iso, store.events).where((e) => e.kind == Kind.holiday);
-  final holiday = hols.isEmpty ? '' : obsTitle(hols.first, lang);
   final publicHols = upcomingHolidays(HolidayType.public);
   final otherHols = upcomingOtherHolidays();
   final silDays = upcomingSilDates();
@@ -130,9 +150,10 @@ Map<String, dynamic> _buildWidgetDisplay(AppStore store) {
     dayIsos.add(h['d']!);
   }
   dayIsos.addAll(silDays);
+  const noEvents = <CalendarEvent>[];
   final days = <String, Map<String, String>>{};
   for (final di in dayIsos) {
-    days[di] = _dayNotifyFields(fromIso(di), lang, store.events);
+    days[di] = _dayNotifyFields(fromIso(di), lang, noEvents);
   }
   final marks = <String, String>{};
   final names = <String, String>{};
@@ -167,9 +188,93 @@ Map<String, dynamic> _buildWidgetDisplay(AppStore store) {
       d = addDays(d, 1);
     }
   }
-  for (final e in store.events) {
+  return {
+    'marks': marks,
+    'names': names,
+    'daysJson': jsonEncode(days),
+    'silCsv': silDays.join(','),
+    'publicJson': jsonEncode(publicHols),
+    'otherJson': jsonEncode(otherHols),
+    // raw lists, used to warm the notification caches on the main isolate
+    'sil': silDays,
+    'pub': publicHols,
+    'others': otherHols,
+  };
+}
+
+class _StaticWidget {
+  _StaticWidget({
+    required this.marks,
+    required this.names,
+    required this.daysJson,
+    required this.silCsv,
+    required this.publicJson,
+    required this.otherJson,
+  });
+  final Map<String, String> marks;
+  final Map<String, String> names;
+  final String daysJson;
+  final String silCsv;
+  final String publicJson;
+  final String otherJson;
+}
+
+String _staticKey = '';
+_StaticWidget? _static;
+Future<_StaticWidget>? _staticFuture;
+String _staticFutureKey = '';
+
+Future<_StaticWidget> _computeStatic(bool en, String key) async {
+  final raw = await compute<bool, Map<String, Object>>(_staticWidgetIsolate, en);
+  seedNotifyListsFrom(raw);
+  final data = _StaticWidget(
+    marks: Map<String, String>.from(raw['marks']! as Map),
+    names: Map<String, String>.from(raw['names']! as Map),
+    daysJson: raw['daysJson']! as String,
+    silCsv: raw['silCsv']! as String,
+    publicJson: raw['publicJson']! as String,
+    otherJson: raw['otherJson']! as String,
+  );
+  _static = data;
+  _staticKey = key;
+  return data;
+}
+
+Future<_StaticWidget> _staticWidgetData(Lang lang) async {
+  final key = '${lang == Lang.en}|${todayIso()}';
+  final cached = _static;
+  if (cached != null && _staticKey == key) return cached;
+  var pending = _staticFuture;
+  if (pending == null || _staticFutureKey != key) {
+    _staticFutureKey = key;
+    pending = _computeStatic(lang == Lang.en, key);
+    _staticFuture = pending;
+  }
+  try {
+    return await pending;
+  } finally {
+    if (identical(_staticFuture, pending)) _staticFuture = null;
+  }
+}
+
+Future<Map<String, dynamic>> _buildWidgetDisplay(AppStore store) async {
+  final lang = store.lang;
+  final data = await _staticWidgetData(lang);
+  final now = DateTime.now();
+  final iso = todayIso();
+  final events = store.events;
+  final lunar = lunarOf(now);
+  final lunarText = lang == Lang.en ? lunarLabel(iso, lang) : lunar.lunarDateText;
+  final hols = observancesOn(iso, events).where((e) => e.kind == Kind.holiday);
+  final holiday = hols.isEmpty ? '' : obsTitle(hols.first, lang);
+
+  // Cheap per-event overlay on top of the cached static data.
+  final marks = Map<String, String>.of(data.marks);
+  final names = Map<String, String>.of(data.names);
+  for (final e in events) {
     if (e.date.isEmpty) continue;
-    flag(e.date, 't');
+    final cur = marks[e.date] ?? '';
+    if (!cur.contains('t')) marks[e.date] = '${cur}t';
     names.putIfAbsent(e.date, () => e.title);
   }
 
@@ -180,14 +285,14 @@ Map<String, dynamic> _buildWidgetDisplay(AppStore store) {
     'lunar': lunarText,
     'holiday': holiday,
     'title': t(lang, 'appName'),
-    'days': jsonEncode(days),
+    'days': data.daysJson,
     'marks': jsonEncode(marks),
     'names': jsonEncode(names),
     'lang': lang == Lang.en ? 'en' : 'km',
     'weekStartsOn': store.weekStartsOn,
-    'sil_days': silDays.join(','),
-    'public_hols': jsonEncode(publicHols),
-    'religious_hols': jsonEncode(otherHols),
+    'sil_days': data.silCsv,
+    'public_hols': data.publicJson,
+    'religious_hols': data.otherJson,
   };
 }
 
@@ -196,13 +301,13 @@ Future<void> syncWeatherWidget(AppStore store) async {
   if (store.weatherCities.isEmpty) return;
   if (NetStatus.isOffline) return;
   final cache = <String, WeatherSnap>{};
-  for (final id in store.weatherCities) {
+  await Future.wait(store.weatherCities.map((id) async {
     final city = cityById(id);
-    if (city == null) continue;
+    if (city == null) return;
     try {
       cache[id] = await fetchWeather(city);
     } catch (_) {}
-  }
+  }));
   await pushWeatherList(store, cache);
 }
 
@@ -276,20 +381,37 @@ Future<void> pushWeatherList(
   try {
     await send();
   } catch (_) {}
-  for (final row in rows) {
-    final id = row['id'] ?? '';
-    final city = cityById(id);
-    final snap = cache[id];
-    if (city == null) continue;
-    if (snap != null) {
-      row['icon'] = await cacheUrl(wmoIconUrl(snap.code), 'wx_icon_$id.png') ?? '';
-    }
-    final remote = await cityPhotoUrl(city);
-    if (remote != null) {
-      row['photo'] = await cacheUrl(remote, 'wx_photo_$id.jpg') ?? '';
-    }
-  }
+  // Icons and photos are slow network/disk work; fill them in without making callers wait.
+  final gen = ++_wxGen;
+  unawaited(_fillWeatherAssets(rows, cache, gen, send));
+}
+
+int _wxGen = 0;
+
+Future<void> _fillWeatherAssets(
+  List<Map<String, String>> rows,
+  Map<String, WeatherSnap> cache,
+  int gen,
+  Future<void> Function() send,
+) async {
   try {
+    await Future.wait(rows.map((row) async {
+      final id = row['id'] ?? '';
+      final city = cityById(id);
+      if (city == null) return;
+      final snap = cache[id];
+      if (snap != null) {
+        row['icon'] = await cacheUrl(wmoIconUrl(snap.code), 'wx_icon_$id.png') ?? '';
+      }
+      // Reuse the photo already on disk instead of searching Wikimedia again on every launch.
+      var photo = await cachedPath('wx_photo_$id.jpg');
+      if (photo == null) {
+        final remote = await cityPhotoUrl(city);
+        if (remote != null) photo = await cacheUrl(remote, 'wx_photo_$id.jpg');
+      }
+      row['photo'] = photo ?? '';
+    }));
+    if (gen != _wxGen) return;
     await send();
   } catch (_) {}
 }

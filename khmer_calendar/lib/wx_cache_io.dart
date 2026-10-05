@@ -18,3 +18,13 @@ Future<String?> cacheUrl(String url, String name) async {
     return null;
   }
 }
+
+/// Path of an already cached file, or null when it has not been downloaded yet.
+Future<String?> cachedPath(String name) async {
+  try {
+    final dir = await getApplicationSupportDirectory();
+    final file = File('${dir.path}/$name');
+    if (await file.exists() && await file.length() > 200) return file.path;
+  } catch (_) {}
+  return null;
+}

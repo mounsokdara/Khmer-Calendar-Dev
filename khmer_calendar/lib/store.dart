@@ -81,7 +81,10 @@ class CalendarEvent {
       );
 }
 
-enum TabId { today, months, events, weather, more }
+enum TabId { today, calendar, events, weather, more }
+
+/// Calendar zoom levels, from most zoomed-out to most zoomed-in.
+const calViewIds = ['years', 'month', 'monthFull', 'week'];
 
 class RouterTick extends ChangeNotifier {
   void bump() => notifyListeners();
@@ -104,8 +107,9 @@ class AppStore extends ChangeNotifier {
   String langPref = 'auto';
   Lang lang = deviceLang();
   bool setupDone = false;
-  TabId lastTab = TabId.months;
+  TabId lastTab = TabId.calendar;
   String lastEventsPane = 'holidays';
+  String calView = 'month';
   List<String> weatherCities = [];
   bool installed = false;
   bool notifyOn = false;
@@ -160,9 +164,11 @@ class AppStore extends ChangeNotifier {
         setupDone = p['setupDone'] as bool? ?? false;
         final tab = p['lastTab'] as String?;
         if (tab != null) {
-          lastTab = TabId.values.firstWhere((t) => t.name == tab, orElse: () => TabId.months);
+          lastTab = TabId.values.firstWhere((t) => t.name == tab, orElse: () => TabId.calendar);
         }
         lastEventsPane = p['lastEventsPane'] as String? ?? 'holidays';
+        final view = p['calView'] as String?;
+        calView = calViewIds.contains(view) ? view! : 'month';
         weatherCities = ((p['weatherCities'] as List?) ?? []).cast<String>();
         if (listEquals(weatherCities, _legacyDefaultCities)) weatherCities = [];
         installed = p['installed'] as bool? ?? false;
@@ -200,8 +206,9 @@ class AppStore extends ChangeNotifier {
   }
 
   Future<void> persist() async {
-    final prefs = await SharedPreferences.getInstance();
-    await prefs.setString(
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      await prefs.setString(
       'khmer-calendar-v4',
       jsonEncode({
         'events': events.map((e) => e.toJson()).toList(),
@@ -217,6 +224,7 @@ class AppStore extends ChangeNotifier {
         'setupDone': setupDone,
         'lastTab': lastTab.name,
         'lastEventsPane': lastEventsPane,
+        'calView': calView,
         'weatherCities': weatherCities,
         'installed': installed,
         'notifyOn': notifyOn,
@@ -232,7 +240,8 @@ class AppStore extends ChangeNotifier {
         'wheelSound': wheelSound,
         'wheelSoundName': wheelSoundName,
       }),
-    );
+      );
+    } catch (_) {}
   }
 
   void _touch({bool save = true}) {
@@ -294,9 +303,9 @@ class AppStore extends ChangeNotifier {
       case 'day':
         lastTab = TabId.today;
         route = '/day';
-      case 'months':
-        lastTab = TabId.months;
-        route = '/months';
+      case 'calendar':
+        lastTab = TabId.calendar;
+        route = '/calendar';
       case 'events':
         lastTab = TabId.events;
         route = '/events';
@@ -379,6 +388,12 @@ class AppStore extends ChangeNotifier {
 
   void setLastEventsPane(String v) {
     lastEventsPane = v;
+    _touch();
+  }
+
+  void setCalView(String v) {
+    if (!calViewIds.contains(v) || calView == v) return;
+    calView = v;
     _touch();
   }
 
@@ -494,6 +509,7 @@ class AppStore extends ChangeNotifier {
     highlightColor = '#FF3B30';
     highlightAlpha = 0.22;
     lastEventsPane = 'holidays';
+    calView = 'month';
     weatherCities = [];
     installed = false;
     notifyOn = false;

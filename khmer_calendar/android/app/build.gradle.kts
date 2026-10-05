@@ -3,9 +3,6 @@ plugins {
     id("dev.flutter.flutter-gradle-plugin")
 }
 
-// Dev build (CI sets KHMER_DEV=true): installs side by side with the production app.
-val isDev = System.getenv("KHMER_DEV") == "true"
-
 android {
     namespace = "com.mounsokdara.khmercalendar"
     compileSdk = flutter.compileSdkVersion
@@ -23,16 +20,13 @@ android {
         targetSdk = flutter.targetSdkVersion
         versionCode = flutter.versionCode
         versionName = flutter.versionName
-        manifestPlaceholders["appLabel"] = if (isDev) "ប្រតិទិនខ្មែរ Dev" else "ប្រតិទិនខ្មែរ"
-        if (isDev) {
-            applicationIdSuffix = ".dev"
-            versionNameSuffix = "-dev"
-        }
     }
 
     packaging {
         jniLibs {
-            // Keep native libraries compressed inside the APK (about half the size).
+            // Store the native libraries (libflutter.so, libapp.so, ...) compressed
+            // inside the APK instead of raw. Same code, ~half the download size;
+            // Android extracts them at install time.
             useLegacyPackaging = true
         }
     }

@@ -273,18 +273,72 @@ String? _otherKey;
 List<Map<String, String>>? _otherCache;
 final _typeCache = <String, List<Map<String, String>>>{};
 
+String _silKeyOf(DateTime now, int endYear) => '${isoOf(DateTime(now.year, now.month, now.day))}|$endYear';
+
+/// Runs in a background isolate: the first (cold) computation walks ~2 years of lunar days and
+/// holiday tables, which freezes the UI if done on the main isolate.
+Map<String, Object> _notifyListsIsolate(int _) => {
+      'sil': upcomingSilDates(),
+      'pub': upcomingHolidays(HolidayType.public),
+      'others': upcomingOtherHolidays(),
+    };
+
+/// Fills the caches used by [upcomingSilDates], [upcomingHolidays] and [upcomingOtherHolidays]
+/// with lists that were computed in another isolate.
+void seedNotifyListsFrom(Map<dynamic, dynamic> raw) {
+  final now = DateTime.now();
+  final sil = raw['sil'];
+  if (sil is List) {
+    _silKey = _silKeyOf(now, notifyEndYear(now));
+    _silCache = sil.cast<String>().toList();
+  }
+  List<Map<String, String>> holidays(Object? v) =>
+      (v as List).map((e) => Map<String, String>.from(e as Map)).toList();
+  final pub = raw['pub'];
+  if (pub is List) _typeCache['${_horizonKey()}|${HolidayType.public.name}'] = holidays(pub);
+  final others = raw['others'];
+  if (others is List) {
+    _otherKey = _horizonKey();
+    _otherCache = holidays(others);
+  }
+}
+
+bool _notifyListsWarm() {
+  final now = DateTime.now();
+  return _silCache != null &&
+      _silKey == _silKeyOf(now, notifyEndYear(now)) &&
+      _otherCache != null &&
+      _otherKey == _horizonKey() &&
+      _typeCache.containsKey('${_horizonKey()}|${HolidayType.public.name}');
+}
+
+Future<void>? _notifyListsFuture;
+
+Future<void> _loadNotifyLists() async {
+  try {
+    final raw = await compute<int, Map<String, Object>>(_notifyListsIsolate, 0);
+    seedNotifyListsFrom(raw);
+  } catch (_) {}
+}
+
+/// Makes sure the upcoming-holiday caches are warm without blocking the UI thread.
+Future<void> ensureNotifyLists() {
+  if (_notifyListsWarm()) return Future<void>.value();
+  return _notifyListsFuture ??= _loadNotifyLists().whenComplete(() => _notifyListsFuture = null);
+}
+
 void warmNotifyLists() {
+  // On Android the widget sync computes and seeds these lists in the background already.
+  if (androidNativeAlarms) return;
   Future<void>.delayed(const Duration(milliseconds: 300), () {
-    upcomingSilDates();
-    upcomingHolidays(HolidayType.public);
-    upcomingOtherHolidays();
+    ensureNotifyLists();
   });
 }
 
 List<String> upcomingSilDates({int? throughYear}) {
   final now = DateTime.now();
   final endYear = throughYear ?? notifyEndYear(now);
-  final key = '${isoOf(DateTime(now.year, now.month, now.day))}|$endYear';
+  final key = _silKeyOf(now, endYear);
   if (_silCache != null && _silKey == key) return _silCache!;
   final last = DateTime(endYear, 12, 31);
   final out = <String>[];

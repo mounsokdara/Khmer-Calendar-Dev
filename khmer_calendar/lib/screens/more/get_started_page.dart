@@ -174,7 +174,7 @@ class _GetStartedPageState extends State<GetStartedPage> {
     if (!allOk) return;
     store.setSetupDone(true);
     if (!mounted) return;
-    context.go('/months');
+    context.go('/calendar');
   }
 
   Future<void> _skip() async {
@@ -184,7 +184,7 @@ class _GetStartedPageState extends State<GetStartedPage> {
     await keepOnlyGranted(store);
     if (!mounted) return;
     store.setSetupDone(true);
-    context.go('/months');
+    context.go('/calendar');
   }
 
   @override
