@@ -3,6 +3,9 @@
 Native Flutter Khmer lunar calendar for phone and desktop. Holy days, national holidays, weather, reminders and a bunch of cool features.
 
 **Visit this Website for demo:** [khmercalendar.pages.dev](https://khmercalendar.pages.dev)
+
+**Dev Preview**
+[https://khmer-calendar-dev.pnsdg.workers.dev/](https://khmer-calendar-dev.pnsdg.workers.dev/)
 ## Run app
 
 ```bash
