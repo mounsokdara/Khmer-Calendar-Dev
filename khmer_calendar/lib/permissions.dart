@@ -165,9 +165,6 @@ Future<void> _openSettingsFor(String kind) async {
         return;
       case 'background':
         await _native('requestBatteryExemption');
-        if (!await backgroundAllowed()) {
-          await _native('openBatterySettings');
-        }
         return;
       case 'auto':
         await _native('openAutoStart');

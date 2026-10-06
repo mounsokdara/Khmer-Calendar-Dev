@@ -7,6 +7,12 @@ import 'haptics_platform.dart';
 
 enum HapticsMode { system, on, off }
 
+/// Vibration only exists on phones and the web app, never on desktop.
+bool get hapticsSupported =>
+    kIsWeb ||
+    defaultTargetPlatform == TargetPlatform.android ||
+    defaultTargetPlatform == TargetPlatform.iOS;
+
 class Haptics {
   Haptics._();
   static final Haptics instance = Haptics._();
@@ -18,6 +24,7 @@ class Haptics {
   HapticsMode get mode => _mode;
 
   Future<void> init() async {
+    if (!hapticsSupported) return;
     final prefs = await SharedPreferences.getInstance();
     final raw = prefs.getString(_key);
     _mode = switch (raw) {
@@ -40,7 +47,7 @@ class Haptics {
   Future<void> thud() => _pulse(22, 160);
 
   Future<void> _pulse(int duration, int amplitude) async {
-    if (_mode == HapticsMode.off) return;
+    if (!hapticsSupported || _mode == HapticsMode.off) return;
 
     if (kIsWeb) {
       await platformHapticTick();

@@ -10,8 +10,12 @@ import '../../widgets/dialog_actions.dart';
 import '../../widgets/overlay_page.dart';
 import '../../widgets/segmented_list.dart';
 
-String soundsAndVibrationTitle(Lang lang) => lang == Lang.km ? 'សំឡេង និងរំញ័រ' : 'Sounds & Vibration';
-String soundsAndVibrationSub(Lang lang) => lang == Lang.km ? 'សំឡេង និងរំញ័រពេលរំកិលកង់ជ្រើសរើស' : 'Sounds and vibration when scrolling the wheel picker';
+String soundsAndVibrationTitle(Lang lang) => hapticsSupported
+    ? (lang == Lang.km ? 'សំឡេង និងរំញ័រ' : 'Sounds & Vibration')
+    : (lang == Lang.km ? 'សំឡេង' : 'Sounds');
+String soundsAndVibrationSub(Lang lang) => hapticsSupported
+    ? (lang == Lang.km ? 'សំឡេង និងរំញ័រពេលរំកិលកង់ជ្រើសរើស' : 'Sounds and vibration when scrolling the wheel picker')
+    : (lang == Lang.km ? 'សំឡេងពេលរំកិលកង់ជ្រើសរើស' : 'Sound when scrolling the wheel picker');
 String hapticsTitle(Lang lang) => lang == Lang.km ? 'រំញ័រ' : 'Haptics';
 String hapticsModeLabel(Lang lang, HapticsMode mode) {
   switch (mode) {
@@ -185,7 +189,8 @@ class SoundsPage extends StatelessWidget {
                       onTap: () => showWheelSoundDialog(context, store),
                     ),
                   ),
-                  SegmentedTile(leading: const Icon(Icons.vibration), title: hapticsTitle(lang), subtitle: hapticsModeLabel(lang, Haptics.instance.mode), onTap: () => showHapticsDialog(context, store)),
+                  if (hapticsSupported)
+                    SegmentedTile(leading: const Icon(Icons.vibration), title: hapticsTitle(lang), subtitle: hapticsModeLabel(lang, Haptics.instance.mode), onTap: () => showHapticsDialog(context, store)),
                 ],
               ),
             ],

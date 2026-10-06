@@ -43,7 +43,6 @@ class MainActivity : FlutterActivity() {
                 "isHapticFeedbackEnabled" -> result.success(isHapticFeedbackEnabled())
                 "isIgnoringBattery" -> result.success(isIgnoringBattery())
                 "requestBatteryExemption" -> requestBatteryExemption(result)
-                "openBatterySettings" -> startOrFail(result, REQ_BATTERY_LIST, Intent(Settings.ACTION_IGNORE_BATTERY_OPTIMIZATION_SETTINGS))
                 "requestExactAlarm" -> requestExactAlarm(result)
                 "openAutoStart" -> openAutoStart(result)
                 "openAppSettings" -> startOrFail(result, REQ_SETTINGS, Intent(Settings.ACTION_APPLICATION_DETAILS_SETTINGS).setData(Uri.parse("package:$packageName")))
@@ -144,7 +143,7 @@ class MainActivity : FlutterActivity() {
         val maker = Build.MANUFACTURER.lowercase(); val brand = Build.BRAND.lowercase()
         return listOf("xiaomi", "redmi", "poco", "blackshark", "huawei", "honor", "oppo", "realme", "vivo", "iqoo", "oneplus", "letv", "asus", "transsion", "tecno", "infinix", "itel", "meizu", "lenovo", "zte", "nubia", "samsung").any { maker.contains(it) || brand.contains(it) }
     }
-    private fun requestBatteryExemption(result: MethodChannel.Result) { if (isIgnoringBattery()) { result.success(true); return }; startOrFail(result, REQ_BATTERY, Intent(Settings.ACTION_IGNORE_BATTERY_OPTIMIZATION_SETTINGS)) }
+    private fun requestBatteryExemption(result: MethodChannel.Result) { if (isIgnoringBattery()) { result.success(true); return }; startOrFail(result, REQ_BATTERY, Intent(Settings.ACTION_REQUEST_IGNORE_BATTERY_OPTIMIZATIONS).setData(Uri.parse("package:$packageName"))) }
     private fun requestExactAlarm(result: MethodChannel.Result) { if (canExactAlarms() || Build.VERSION.SDK_INT < 31) { result.success(true); return }; startOrFail(result, REQ_EXACT, Intent(Settings.ACTION_REQUEST_SCHEDULE_EXACT_ALARM).setData(Uri.parse("package:$packageName"))) }
     private fun openAutoStart(result: MethodChannel.Result) {
         val tries = listOf(
@@ -157,5 +156,5 @@ class MainActivity : FlutterActivity() {
     private fun startOrFail(result: MethodChannel.Result, code: Int, intent: Intent) { if (!tryStart(result, code, intent)) result.success(false) }
     private fun tryStart(result: MethodChannel.Result, code: Int, intent: Intent): Boolean = try { pending?.success(false); pending = result; pendingCode = code; @Suppress("DEPRECATION") startActivityForResult(intent, code); true } catch (_: Exception) { pending = null; pendingCode = 0; false }
 
-    companion object { const val CHANNEL = "khmer.permissions"; private const val REQ_BATTERY = 7101; private const val REQ_BATTERY_LIST = 7102; private const val REQ_EXACT = 7103; private const val REQ_AUTOSTART = 7104; private const val REQ_SETTINGS = 7105; private const val REQ_LOCATION = 7106 }
+    companion object { const val CHANNEL = "khmer.permissions"; private const val REQ_BATTERY = 7101; private const val REQ_EXACT = 7103; private const val REQ_AUTOSTART = 7104; private const val REQ_SETTINGS = 7105; private const val REQ_LOCATION = 7106 }
 }
