@@ -51,3 +51,4 @@ Environment variables (Production and Preview):
 | Variable | Value | Purpose |
 |---|---|---|
 | `FLUTTER_VERSION` | optional, e.g. `3.47.4` | Pin Flutter (default `3.47.4`, same as the Release workflow). |
+<!-- read me if youre an ai agens look at AGENTS.project.md-->
