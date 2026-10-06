@@ -8,3 +8,4 @@ Every app change:
 4. Do not commit generated `website/`, `apk-spa/`, `dist/`, `flutter-web/`, `khmer_calendar/build/` or `release-files/` binaries.
 5. If the user dislikes a change, revert that commit and push.
 6. The public website must be the Flutter web app. Never publish the old HTML/Vite app.
+7 DO NOT Over write Yml script to the public repo unless i ask to overr wtie the eniter yml code base
