@@ -49,14 +49,23 @@ jobs:
           DEXDUMP=$(ls "$ANDROID_HOME"/build-tools/*/dexdump | sort -V | tail -1)
           rm -rf /tmp/dex && mkdir -p /tmp/dex
           unzip -q -o "$APK" 'classes*.dex' -d /tmp/dex
-          bad=0
-          for f in /tmp/dex/classes*.dex; do
-            "$DEXDUMP" "$f" > /tmp/dump.txt
-            grep -E "Class descriptor" /tmp/dump.txt | grep -oE "com/google/(android/(play|gms)|firebase)/[A-Za-z0-9_/$]+" | sort -u > /tmp/defs.txt || true
-            grep -oE "com/google/(android/(play|gms)|firebase)/[A-Za-z0-9_/$]+" /tmp/dump.txt | sort -u > /tmp/refs.txt || true
-            if [ -s /tmp/defs.txt ]; then echo "::error::Google classes DEFINED in $f:"; head -20 /tmp/defs.txt; bad=1; fi
-            if [ -s /tmp/refs.txt ]; then echo "::warning::Google class references in $f (count $(wc -l < /tmp/refs.txt)):"; head -12 /tmp/refs.txt; fi
-          done
-          [ "$bad" -eq 0 ] || exit 1
-          echo "No Google (Play Core, Play Services, Firebase) classes defined in the APK"
-          echo "Update check hidden in F-Droid build: $(unzip -p "$APK" 'classes*.dex' | grep -ac 'api.github.com/repos/mounsokdara/Khmer-Calendar' || true) dex hits for the GitHub URL"
+          # Same detection as F-Droid's scanner (fdroidserver scanner.get_embedded_classes): any class path
+          # mentioned anywhere in the dexdump output counts, definitions AND references.
+          DEXDUMP="$DEXDUMP" python3 - <<'PY'
+          import glob, os, re, subprocess, sys
+          BAD = ("com/google/android/gms", "com/google/android/play", "com/google/firebase",
+                 "com/google/android/datatransport", "com/google/mlkit")
+          bad = 0
+          for dex in sorted(glob.glob("/tmp/dex/classes*.dex")):
+              out = subprocess.run([os.environ["DEXDUMP"], dex], capture_output=True, text=True).stdout
+              for block in re.split(r"\n(?=Class #\d+)", out):
+                  m = re.search(r"Class descriptor\s*:\s*'L([^;]+);'", block)
+                  found = sorted({c for c in re.findall(r"[A-Z]+((?:\w+/)+\w+)", block) if c.startswith(BAD)})
+                  if found:
+                      bad += 1
+                      print(f"::error::{m.group(1) if m else '?'} -> {', '.join(found)[:900]}")
+          if bad:
+              print(f"::error::{bad} classes mention Google libraries; F-Droid's scanner would reject this APK")
+              sys.exit(1)
+          print("OK: no Google Play Core / Play Services / Firebase class is mentioned anywhere in the dex")
+          PY
