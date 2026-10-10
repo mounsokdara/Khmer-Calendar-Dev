@@ -1,0 +1,14 @@
+Khmer Calendar is a free, open-source lunar calendar for Cambodia. It shows the Khmer date (lunar day, month and Buddhist Era year) next to the Gregorian date and marks Buddhist holy days and national holidays.
+
+<b>Features</b>
+• Month, year, week and day views with Khmer lunar dates
+• Holiday and holy day list for any year
+• Events and tasks with optional reminders
+• Weather for Cambodian cities with an hourly forecast (data from Open-Meteo)
+• Material You dynamic colours, light, dark and AMOLED black themes
+• Khmer and English interface; choose Saturday, Sunday or Monday as the first day of the week
+• Separate notification switches for holy days, public holidays, other festivals and your own reminders
+• No account, no ads, no analytics, no tracking. Your data stays on your device
+
+<b>Permissions</b>
+Internet (weather and city photos), approximate location only when you tap "use my location", and notifications and alarms for reminders.

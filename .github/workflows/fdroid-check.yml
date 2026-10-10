@@ -1,0 +1,62 @@
+# Builds the Android app the way F-Droid does (no keystore) and scans the APK for Google libraries.
+# Run it from Actions > F-Droid check > Run workflow, or it runs when the Android build files change.
+name: F-Droid check
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [main]
+    paths:
+      - "khmer_calendar/android/**"
+      - "khmer_calendar/pubspec.*"
+      - ".github/workflows/fdroid-check.yml"
+
+permissions:
+  contents: read
+
+concurrency:
+  group: fdroid-check
+  cancel-in-progress: true
+
+jobs:
+  fdroid:
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "17"
+      - uses: subosito/flutter-action@v2
+        with:
+          flutter-version: "3.47.4"
+          channel: stable
+          cache: true
+      - run: flutter pub get
+        working-directory: khmer_calendar
+      - name: Build like F-Droid (no keystore)
+        working-directory: khmer_calendar
+        run: |
+          export FDROID_BUILD=1
+          flutter build apk --release --dart-define=FDROID=true
+      - name: Check the APK
+        run: |
+          APK=khmer_calendar/build/app/outputs/flutter-apk/app-release.apk
+          test -f "$APK" || { echo "::error::$APK was not produced"; exit 1; }
+          AAPT=$(ls "$ANDROID_HOME"/build-tools/*/aapt2 | sort -V | tail -1)
+          "$AAPT" dump badging "$APK" | grep -m1 "^package:"
+          DEXDUMP=$(ls "$ANDROID_HOME"/build-tools/*/dexdump | sort -V | tail -1)
+          rm -rf /tmp/dex && mkdir -p /tmp/dex
+          unzip -q -o "$APK" 'classes*.dex' -d /tmp/dex
+          bad=0
+          for f in /tmp/dex/classes*.dex; do
+            "$DEXDUMP" "$f" > /tmp/dump.txt
+            grep -E "Class descriptor" /tmp/dump.txt | grep -oE "com/google/(android/(play|gms)|firebase)/[A-Za-z0-9_/$]+" | sort -u > /tmp/defs.txt || true
+            grep -oE "com/google/(android/(play|gms)|firebase)/[A-Za-z0-9_/$]+" /tmp/dump.txt | sort -u > /tmp/refs.txt || true
+            if [ -s /tmp/defs.txt ]; then echo "::error::Google classes DEFINED in $f:"; head -20 /tmp/defs.txt; bad=1; fi
+            if [ -s /tmp/refs.txt ]; then echo "::warning::Google class references in $f (count $(wc -l < /tmp/refs.txt)):"; head -12 /tmp/refs.txt; fi
+          done
+          [ "$bad" -eq 0 ] || exit 1
+          echo "No Google (Play Core, Play Services, Firebase) classes defined in the APK"
+          echo "Update check hidden in F-Droid build: $(unzip -p "$APK" 'classes*.dex' | grep -ac 'api.github.com/repos/mounsokdara/Khmer-Calendar' || true) dex hits for the GitHub URL"

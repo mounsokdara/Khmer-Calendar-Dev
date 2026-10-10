@@ -37,6 +37,8 @@ class AboutPage extends StatelessWidget {
                     title: t(lang, 'buildVersion'),
                     subtitle: '$appVersion ($appBuildNumber)',
                   ),
+                  // F-Droid builds (--dart-define=FDROID=true) update through F-Droid, not GitHub.
+                  if (!const bool.fromEnvironment('FDROID'))
                   SegmentedTile(
                     leading: const Icon(Icons.system_update_outlined),
                     title: lang == Lang.km ? 'ពិនិត្យកំណែថ្មី' : 'Check for updates',

@@ -29,6 +29,12 @@ android {
             // Android extracts them at install time.
             useLegacyPackaging = true
         }
+
+    // F-Droid: do not embed the Google "Dependency metadata" signing block in the APK
+    dependenciesInfo {
+        includeInApk = false
+        includeInBundle = false
+    }
     }
 
     signingConfigs {
@@ -47,7 +53,12 @@ android {
     buildTypes {
         release {
             val rel = signingConfigs.findByName("release")
-            signingConfig = if (rel?.storeFile?.exists() == true) rel else throw GradleException("Release keystore missing: refusing to sign a release build with the debug key")
+            signingConfig = when {
+                rel?.storeFile?.exists() == true -> rel
+                // F-Droid builds without our keystore and signs the APK itself (its build sets FDROID_BUILD).
+                System.getenv("FDROID_BUILD") != null -> signingConfigs.getByName("debug")
+                else -> throw GradleException("Release keystore missing: refusing to sign a release build with the debug key")
+            }
         }
     }
 }
@@ -60,6 +71,14 @@ kotlin {
 
 flutter {
     source = "../.."
+}
+
+// F-Droid: no Google libraries. geolocator_android declares Play Services (the app forces the plain
+// Android LocationManager, see lib/location.dart) and Flutter's embedding references Play Core
+// (only used for Play Store deferred components, which this app does not use).
+configurations.configureEach {
+    exclude(group = "com.google.android.gms")
+    exclude(group = "com.google.android.play")
 }
 
 dependencies {

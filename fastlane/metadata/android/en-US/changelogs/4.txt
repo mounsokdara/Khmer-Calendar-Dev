@@ -1,0 +1,2 @@
+• Privacy policy link in the About and Privacy pages
+• Android: direct prompt to let the app run in the background so reminders arrive on time
