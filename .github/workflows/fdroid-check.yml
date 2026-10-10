@@ -45,7 +45,8 @@ jobs:
           APK=khmer_calendar/build/app/outputs/flutter-apk/app-release.apk
           test -f "$APK" || { echo "::error::$APK was not produced"; exit 1; }
           AAPT=$(ls "$ANDROID_HOME"/build-tools/*/aapt2 | sort -V | tail -1)
-          "$AAPT" dump badging "$APK" | grep -m1 "^package:"
+          BADGING=$("$AAPT" dump badging "$APK")
+          echo "$BADGING" | head -n 1
           DEXDUMP=$(ls "$ANDROID_HOME"/build-tools/*/dexdump | sort -V | tail -1)
           rm -rf /tmp/dex && mkdir -p /tmp/dex
           unzip -q -o "$APK" 'classes*.dex' -d /tmp/dex
