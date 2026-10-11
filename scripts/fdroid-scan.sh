@@ -17,7 +17,7 @@ BAD = ("com/google/android/gms", "com/google/android/play", "com/google/firebase
        "com/google/android/datatransport", "com/google/mlkit")
 bad = 0
 for dex in sorted(glob.glob("/tmp/dex/classes*.dex")):
-    out = subprocess.run([os.environ["DEXDUMP"], dex], capture_output=True, text=True).stdout
+    out = subprocess.run([os.environ["DEXDUMP"], dex], capture_output=True).stdout.decode("utf-8", "replace")
     for block in re.split(r"\n(?=Class #\d+)", out):
         m = re.search(r"Class descriptor\s*:\s*'L([^;]+);'", block)
         found = sorted({c for c in re.findall(r"[A-Z]+((?:\w+/)+\w+)", block) if c.startswith(BAD)})
