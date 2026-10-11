@@ -9,6 +9,8 @@ on:
     paths:
       - "khmer_calendar/android/**"
       - "khmer_calendar/pubspec.*"
+      - "khmer_calendar/third_party/**"
+      - "scripts/fdroid-scan.sh"
       - ".github/workflows/fdroid-check.yml"
 
 permissions:

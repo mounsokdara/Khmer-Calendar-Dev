@@ -46,3 +46,8 @@ flutter:
     - family: KantumruyPro
       fonts:
         - asset: assets/fonts/KantumruyPro.ttf
+
+# F-Droid: geolocator_android without the Google Play Services backend (see third_party/geolocator_android/README.md)
+dependency_overrides:
+  geolocator_android:
+    path: third_party/geolocator_android
