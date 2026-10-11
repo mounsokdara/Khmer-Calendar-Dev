@@ -43,6 +43,9 @@ List<DateTime> _eachDay(DateTime start, DateTime end) {
   return out;
 }
 
+const _pchumBenKm = 'ភ្ជុំបិណ្ឌ';
+const _pchumBenFestivalKm = 'ព្រះរាជពិធីបុណ្យភ្ជុំបិណ្ឌ';
+
 DateTime? _pchumBenDate(int year) {
   final list = holidaysOfYear(year);
   final h = list.cast<Holiday?>().firstWhere(
@@ -187,7 +190,11 @@ List<Observance> rangeObservances(DateTime start, DateTime end, List<CalendarEve
     final iso = isoOf(d);
     final info = dayInfo(iso);
     final hols = (info.holidays != null && info.holidays!.isNotEmpty) ? info.holidays! : holidaysOn(iso);
+    // The royal Pchum Ben festival already covers the Pchum Ben day itself, so
+    // hide the separate religious entry to avoid showing the holiday twice.
+    final hasPchumBenFestival = hols.any((h) => h.nameKm == _pchumBenFestivalKm);
     for (final h in hols) {
+      if (hasPchumBenFestival && h.nameKm == _pchumBenKm && h.type == HolidayType.religious) continue;
       final id = 'hol-$iso-${h.nameKm}';
       if (seen.contains(id)) continue;
       seen.add(id);
